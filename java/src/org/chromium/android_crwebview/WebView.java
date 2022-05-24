@@ -44,13 +44,6 @@ public class WebView extends FrameLayout {
     private static HandlerThread sRenderThread;
     private static Handler sRenderThreadHandler;
 
-    //static {
-    //    try {
-    //        System.loadLibrary("crwebview");
-    //    } catch (Exception e) {
-    //    }
-    //}
-
     private AwContents mAwContents;
     private AwContents.InternalAccessDelegate mInternalAccessDelegate;
 
