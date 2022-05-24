@@ -23,12 +23,12 @@
 
   <application android:name="io.mask.crwebview.AwShellApplication"
       android:icon="@mipmap/ic_launcher"
-      android:label="crWebViewDemo"
+      android:label="crWebView"
       android:roundIcon="@mipmap/ic_launcher_round"
       android:supportsRtl="true"
       android:hardwareAccelerated="true">
     <activity android:name="io.mask.crwebview.AwShellActivity"
-        android:label="crWebView demo"
+        android:label="crWebView example"
         android:configChanges="orientation|keyboardHidden|keyboard|screenSize"
         android:exported="true">
       <intent-filter>
