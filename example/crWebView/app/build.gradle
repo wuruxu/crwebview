@@ -38,4 +38,6 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.3'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
     implementation files('/home/user/dev/dian/chromium/src/out/arm64/android_crwebview.WebView-v1.0.0.aar')
+    implementation files('/home/user/dev/dian/chromium/src/out/arm64/ui-android-resources-v1.0.0.aar')
+    implementation files('/home/user/dev/dian/chromium/src/out/arm64/content-android-resources-v1.0.0.aar')
 }
