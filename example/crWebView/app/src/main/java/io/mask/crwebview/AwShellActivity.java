@@ -49,6 +49,7 @@ import java.util.Arrays;
 
 import org.chromium.android_crwebview.WebView;
 import org.chromium.android_crwebview.ContentsClient;
+import org.chromium.build.NativeLibraries;
 /**
  * This is a lightweight activity for tests that only require WebView functionality.
  */
@@ -71,6 +72,7 @@ public class AwShellActivity extends Activity {
 
         AwShellResourceProvider.registerResources(this);
 
+        System.loadLibrary("crwebview");
         AwBrowserProcess.loadLibrary(null);
 
         setContentView(R.layout.shellactivity);
