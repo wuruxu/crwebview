@@ -106,7 +106,7 @@ public class WebView extends FrameLayout {
             getHolder().addCallback(this);
 
             // Main SurfaceView needs to be positioned above the media content.
-            setZOrderMediaOverlay(true);
+            setZOrderMediaOverlay(false);
 
             mOverlaysSurfaceView = new SurfaceView(context);
             mOverlaysSurfaceView.getHolder().addCallback(this);
@@ -136,10 +136,13 @@ public class WebView extends FrameLayout {
         }
 
         @Override
-        public void surfaceCreated(SurfaceHolder holder) {}
+        public void surfaceCreated(SurfaceHolder holder) {
+            Log.i("WebView", "surfaceCreated " + holder);
+        }
 
         @Override
         public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+            Log.i("WebView", "surfaceChanged " + holder + " width " + width + " height " + height);
             if (holder == mOverlaysSurfaceView.getHolder()) {
                 Surface surface = holder.getSurface();
                 sRenderThreadHandler.post(() -> { mContextManager.setOverlaysSurface(surface); });
@@ -162,6 +165,7 @@ public class WebView extends FrameLayout {
 
         @Override
         public void surfaceDestroyed(SurfaceHolder holder) {
+            Log.i("WebView", "surfaceDestroyed " + holder);
             if (holder == mOverlaysSurfaceView.getHolder()) {
                 WaitableEvent event = new WaitableEvent();
                 sRenderThreadHandler.post(() -> {
@@ -397,12 +401,18 @@ public class WebView extends FrameLayout {
     }
 
     @Override
+    public void onLayout(boolean changed, int left, int top, int right, int bottom) {
+        super.onLayout(changed, left, top, right, bottom);
+        Log.i("WebView", "onLayout changed " + changed);
+    }
+
+    @Override
     public void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
         if (isBackedByHardwareView()) {
             mHardwareView.updateScroll(getScrollX(), getScrollY());
         }
         mAwContents.onDraw(canvas);
-        super.onDraw(canvas);
     }
 
     @Override

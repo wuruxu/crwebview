@@ -89,7 +89,9 @@ public class ContentsClient extends AwContentsClient {
 
     @Override
     public boolean onConsoleMessage(AwConsoleMessage consoleMessage) {
-        return false;
+        String formattedMessage = "[" + consoleMessage.sourceId() + "] " + consoleMessage.message();
+        Log.i(TAG, formattedMessage);
+        return true;
     }
 
     @Override

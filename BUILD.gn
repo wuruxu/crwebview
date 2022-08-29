@@ -36,6 +36,8 @@ android_assets("crwebview_assets") {
   deps = [
     "//android_webview:pak_file_assets",
     "//third_party/icu:icu_assets",
+    "//android_webview:pak_file_assets",
+    "//android_webview:locale_pak_assets",
   ]
   disable_compression = true
 
@@ -186,6 +188,7 @@ shared_library("libcrwebview") {
     ":crwebview_jni_registration",
     ":draw_fn_impl_jni_headers",
     "//android_webview/browser/gfx",
+    "//android_webview/browser",
     "//android_webview/lib",
     "//android_webview/lib:webview_entry_point",
     "//android_webview/nonembedded",
@@ -194,6 +197,9 @@ shared_library("libcrwebview") {
     "//gpu/vulkan",
     "//gpu/vulkan/init",
     "//gpu/vulkan/init:skia",
+    "//device/bluetooth",
+    "//components/keyed_service/core",
+    "//components/keyed_service/content",
   ]
   libs = [ "android" ]
   configs -= [ "//build/config/android:hide_all_but_jni_onload" ]
@@ -214,7 +220,7 @@ dist_aar("crwebview_aar") {
     #"org/chromium/android_webview/*",
     #"org/chromium/android_crwebview/*",
   ]
-  resource_included_patterns = [ "*/android_webview/crwebview/*" ]
+  resource_included_patterns = [ "*/android_webview/crwebview/*", "*/android_webview/*" ]
   #resource_included_patterns = [ "*/content/public/android/*" ]
   #resource_included_patterns = [ "*/ui/android/*", "*/android_webview/*" ]
 
@@ -245,6 +251,7 @@ dist_aar("ui_resources_aar") {
   deps = [
     ":ui_android_manifest",
     "//ui/android:ui_java_resources",
+    "//ui/resources:resources",
   ]
 
   jar_included_patterns = [
