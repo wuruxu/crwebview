@@ -1,0 +1,749 @@
+diff --git a/android_webview/BUILD.gn b/android_webview/BUILD.gn
+index 51b321eceaab7..3d37cc18a4d58 100644
+--- a/android_webview/BUILD.gn
++++ b/android_webview/BUILD.gn
+@@ -890,6 +890,7 @@ android_assets("locale_pak_assets") {
+ repack("repack_pack") {
+   sources = [
+     "$root_gen_dir/content/content_resources.pak",
++    "$root_gen_dir/extensions/extensions_resources.pak",
+     "$root_gen_dir/net/net_resources.pak",
+     "$root_gen_dir/third_party/blink/public/resources/blink_resources.pak",
+     "$root_gen_dir/third_party/blink/public/resources/inspector_overlay_resources.pak",
+@@ -901,6 +902,7 @@ repack("repack_pack") {
+     ":generate_components_resources",
+     ":generate_mojo_resources",
+     ":generate_webui_resources",
++    "//extensions:extensions_resources",
+     "//content:content_resources",
+     "//net:net_resources",
+     "//third_party/blink/public:devtools_inspector_resources",
+diff --git a/android_webview/browser/BUILD.gn b/android_webview/browser/BUILD.gn
+index 85a26c49f96e4..a5e960d0b7634 100644
+--- a/android_webview/browser/BUILD.gn
++++ b/android_webview/browser/BUILD.gn
+@@ -199,6 +199,35 @@ source_set("browser") {
+     "tracing/aw_tracing_delegate.h",
+     "tracing/background_tracing_field_trial.cc",
+     "tracing/background_tracing_field_trial.h",
++    "//extensions/shell/browser/shell_extension_host_delegate.cc",
++    "//extensions/shell/browser/shell_extension_host_delegate.h",
++    "//extensions/shell/browser/shell_extensions_browser_client.cc",
++    "//extensions/shell/browser/shell_extensions_browser_client.h",
++    "//extensions/shell/browser/shell_extension_loader.cc",
++    "//extensions/shell/browser/shell_extension_loader.h",
++    "//extensions/shell/browser/shell_extensions_api_client.cc",
++    "//extensions/shell/browser/shell_extensions_api_client.h",
++    "//extensions/shell/browser/shell_extension_system.cc",
++    "//extensions/shell/browser/shell_extension_system.h",
++    "//extensions/shell/browser/shell_extension_system_factory.cc",
++    "//extensions/shell/browser/shell_extension_system_factory.h",
++    "//extensions/shell/browser/shell_extension_web_contents_observer.cc",
++    "//extensions/shell/browser/shell_extension_web_contents_observer.h",
++    "//extensions/shell/browser/api/file_system/shell_file_system_delegate.cc",
++    "//extensions/shell/browser/api/file_system/shell_file_system_delegate.h",
++    "//extensions/shell/browser/api/runtime/shell_runtime_api_delegate.cc",
++    "//extensions/shell/browser/api/runtime/shell_runtime_api_delegate.h",
++    "//extensions/shell/browser/shell_navigation_ui_data.cc",
++    "//extensions/shell/browser/shell_navigation_ui_data.h",
++    "//extensions/shell/browser/shell_display_info_provider.h",
++    "//extensions/shell/browser/shell_display_info_provider.cc",
++    "//extensions/shell/browser/shell_prefs.cc",
++    "//extensions/shell/browser/shell_prefs.h",
++    "//extensions/shell/browser/shell_virtual_keyboard_delegate.cc",
++    "//extensions/shell/browser/shell_virtual_keyboard_delegate.h",
++    #"//extensions/shell/browser/delegates/shell_kiosk_delegate.cc",
++    #"//extensions/shell/browser/delegates/shell_kiosk_delegate.h",
++    #"//extensions/shell/browser/",
+   ]
+ 
+   deps = [
+@@ -226,6 +255,8 @@ source_set("browser") {
+     "//components/embedder_support/origin_trials",
+     "//components/favicon_base:favicon_base",
+     "//components/flags_ui",
++    "//device/bluetooth",
++    "//components/keyed_service/core",
+     "//components/keyed_service/content",
+     "//components/optimization_guide/core:bloomfilter",
+     "//components/profile_metrics",
+@@ -294,6 +325,17 @@ source_set("browser") {
+     "//ui/resources",
+     "//ui/touch_selection",
+     "//url:gurl_android",
++
++    "//extensions/browser",
++    "//extensions/browser:core_api_provider",
++    "//extensions/browser/api",
++    "//extensions/browser/api/messaging",
++    "//extensions/browser/kiosk",
++    "//extensions/browser/updater",
++    "//extensions/common",
++    "//extensions/common:core_api_provider",
++    "//extensions/common/api",
++    "//extensions/renderer",
+   ]
+ 
+   if (enable_basic_printing) {
+diff --git a/android_webview/browser/aw_browser_main_parts.cc b/android_webview/browser/aw_browser_main_parts.cc
+index a916de70fe82c..1cef445993f1f 100644
+--- a/android_webview/browser/aw_browser_main_parts.cc
++++ b/android_webview/browser/aw_browser_main_parts.cc
+@@ -59,6 +59,19 @@
+ #include "ui/base/layout.h"
+ #include "ui/gl/gl_surface.h"
+ 
++#include "extensions/browser/browser_context_keyed_service_factories.h"
++#include "extensions/shell/browser/shell_extension_system.h"
++#include "extensions/shell/browser/shell_extension_system_factory.h"
++#include "extensions/shell/common/shell_extensions_client.h"
++#include "extensions/shell/browser/shell_extensions_browser_client.h"
++#include "extensions/shell/browser/shell_prefs.h"
++#include "extensions/common/constants.h"
++
++#include "components/sessions/core/session_id_generator.h"
++#include "components/storage_monitor/storage_monitor.h"
++#include "components/keyed_service/content/browser_context_dependency_manager.h"
++#include "components/keyed_service/content/browser_context_keyed_service_factory.h"
++
+ namespace android_webview {
+ 
+ AwBrowserMainParts::AwBrowserMainParts(AwContentBrowserClient* browser_client)
+@@ -98,6 +111,7 @@ int AwBrowserMainParts::PreCreateThreads() {
+   child_exit_observer_ =
+       std::make_unique<::crash_reporter::ChildExitObserver>();
+ 
++   //content::ChildProcessSecurityPolicy::GetInstance()->RegisterWebSafeScheme(extensions::kExtensionScheme);
+   // We need to create the safe browsing specific directory even if the
+   // AwSafeBrowsingConfigHelper::GetSafeBrowsingEnabled() is false
+   // initially, because safe browsing can be enabled later at runtime
+@@ -161,14 +175,50 @@ void AwBrowserMainParts::RegisterSyntheticTrials() {
+ int AwBrowserMainParts::PreMainMessageLoopRun() {
+   TRACE_EVENT0("startup", "AwBrowserMainParts::PreMainMessageLoopRun");
+   AwBrowserProcess::GetInstance()->PreMainMessageLoopRun();
+-  browser_client_->InitBrowserContext();
++  browser_context_ = browser_client_->InitBrowserContext();
+   content::WebUIControllerFactory::RegisterFactory(
+       AwWebUIControllerFactory::GetInstance());
+   content::RenderFrameHost::AllowInjectingJavaScript();
+   metrics_logger_ = std::make_unique<metrics::MemoryMetricsLogger>();
++
++  extensions_client_ = std::make_unique<extensions::ShellExtensionsClient>();
++  extensions::ExtensionsClient::Set(extensions_client_.get());
++
++  // BrowserContextKeyedAPIServiceFactories require an ExtensionsBrowserClient.
++  extensions_browser_client_ = std::make_unique<extensions::ShellExtensionsBrowserClient>();
++  extensions::ExtensionsBrowserClient::Set(extensions_browser_client_.get());
++
++  extensions::EnsureBrowserContextKeyedServiceFactoriesBuilt();
++  extensions::ShellExtensionSystemFactory::GetInstance();
++
++  local_state_ = extensions::shell_prefs::CreateLocalState(browser_context_->GetPath());
++  sessions::SessionIdGenerator::GetInstance()->Init(local_state_.get());
++  user_pref_service_ = extensions::shell_prefs::CreateUserPrefService(browser_context_);
++  extensions_browser_client_->InitWithBrowserContext(browser_context_, user_pref_service_.get());
++
++  BrowserContextDependencyManager::GetInstance()->CreateBrowserContextServices(browser_context_);
++  storage_monitor::StorageMonitor::Create();
++
++  extension_system_ = static_cast<extensions::ShellExtensionSystem*>(extensions::ExtensionSystem::Get(browser_context_));
++  extension_system_->InitForRegularProfile(true);
++  extension_system_->FinishInitialization();
++
++  const extensions::Extension* ext = extension_system_->LoadExtension(base::FilePath("/data/local/tmp/skyblue_ext"));
++  LOG(INFO) << "Extensions.LoadExtension extension : " << ext << " id : " << ext->id();
++
+   return content::RESULT_CODE_NORMAL_EXIT;
+ }
+ 
++void AwBrowserMainParts::PostMainMessageLoopRun() {
++  BrowserContextDependencyManager::GetInstance()->DestroyBrowserContextServices(browser_context_);
++  storage_monitor::StorageMonitor::Destroy();
++  sessions::SessionIdGenerator::GetInstance()->Shutdown();
++  user_pref_service_->CommitPendingWrite();
++  user_pref_service_.reset();
++  local_state_->CommitPendingWrite();
++  local_state_.reset();
++}
++
+ void AwBrowserMainParts::WillRunMainMessageLoop(
+     std::unique_ptr<base::RunLoop>& run_loop) {
+   NOTREACHED();
+diff --git a/android_webview/browser/aw_browser_main_parts.h b/android_webview/browser/aw_browser_main_parts.h
+index 188c346ade29e..1231618083dbd 100644
+--- a/android_webview/browser/aw_browser_main_parts.h
++++ b/android_webview/browser/aw_browser_main_parts.h
+@@ -12,6 +12,7 @@
+ #include "base/memory/raw_ptr.h"
+ #include "base/task/single_thread_task_executor.h"
+ #include "content/public/browser/browser_main_parts.h"
++#include "extensions/shell/browser/shell_extension_system.h"
+ 
+ namespace crash_reporter {
+ class ChildExitObserver;
+@@ -20,6 +21,11 @@ class ChildExitObserver;
+ namespace metrics {
+ class MemoryMetricsLogger;
+ }
++namespace extensions {
++class ShellExtensionSystem;
++class ShellExtensionsClient;
++class ShellExtensionsBrowserClient;
++}
+ 
+ namespace android_webview {
+ 
+@@ -39,6 +45,7 @@ class AwBrowserMainParts : public content::BrowserMainParts {
+   int PreEarlyInitialization() override;
+   int PreCreateThreads() override;
+   int PreMainMessageLoopRun() override;
++  void PostMainMessageLoopRun() override;
+   void WillRunMainMessageLoop(
+       std::unique_ptr<base::RunLoop>& run_loop) override;
+   void PostCreateThreads() override;
+@@ -55,6 +62,14 @@ class AwBrowserMainParts : public content::BrowserMainParts {
+ 
+   std::unique_ptr<AwBrowserProcess> browser_process_;
+   std::unique_ptr<crash_reporter::ChildExitObserver> child_exit_observer_;
++
++  std::unique_ptr<PrefService> local_state_;
++  std::unique_ptr<PrefService> user_pref_service_;
++
++  raw_ptr<extensions::ShellExtensionSystem> extension_system_;
++  std::unique_ptr<extensions::ShellExtensionsClient> extensions_client_;
++  std::unique_ptr<extensions::ShellExtensionsBrowserClient> extensions_browser_client_;
++  AwBrowserContext* browser_context_;
+ };
+ 
+ }  // namespace android_webview
+diff --git a/android_webview/browser/aw_content_browser_client.cc b/android_webview/browser/aw_content_browser_client.cc
+index f0c140eaf110f..7233e1b001168 100644
+--- a/android_webview/browser/aw_content_browser_client.cc
++++ b/android_webview/browser/aw_content_browser_client.cc
+@@ -114,6 +114,29 @@
+ #include "ui/gfx/image/image_skia.h"
+ #include "ui/resources/grit/ui_resources.h"
+ 
++#include "extensions/browser/api/messaging/messaging_api_message_filter.h"
++#include "extensions/browser/extension_service_worker_message_filter.h"
++#include "extensions/browser/api/web_request/web_request_api.h"
++#include "extensions/browser/event_router.h"
++#include "extensions/browser/extension_message_filter.h"
++#include "extensions/browser/extension_navigation_throttle.h"
++#include "extensions/browser/extension_navigation_ui_data.h"
++#include "extensions/browser/extension_protocols.h"
++#include "extensions/browser/extension_registry.h"
++#include "extensions/browser/extension_web_contents_observer.h"
++#include "extensions/browser/guest_view/extensions_guest_view.h"
++#include "extensions/browser/guest_view/web_view/web_view_guest.h"
++#include "extensions/browser/process_map.h"
++#include "extensions/browser/url_loader_factory_manager.h"
++#include "extensions/common/constants.h"
++#include "extensions/common/extension.h"
++#include "extensions/common/switches.h"
++#include "extensions/shell/browser/shell_navigation_ui_data.h"
++#include "extensions/browser/url_loader_factory_manager.h"
++
++#include "extensions/shell/browser/shell_extension_system.h"
++#include "extensions/shell/browser/shell_extension_web_contents_observer.h"
++
+ using content::BrowserThread;
+ using content::WebContents;
+ 
+@@ -296,6 +319,95 @@ void AwContentBrowserClient::RenderProcessWillLaunch(
+   host->AddFilter(new AwContentsMessageFilter(host->GetID()));
+   // WebView always allows persisting data.
+   host->AddFilter(new cdm::CdmMessageFilterAndroid(true, false));
++
++  host->AddFilter(new extensions::ExtensionMessageFilter(host->GetID(), browser_context_.get()));
++  host->AddFilter(new extensions::MessagingAPIMessageFilter(host->GetID(), browser_context_.get()));
++  host->AddFilter(new extensions::ExtensionServiceWorkerMessageFilter(host->GetID(), browser_context_.get(), host->GetStoragePartition()->GetServiceWorkerContext()));
++}
++
++void AwContentBrowserClient::SiteInstanceGotProcess(content::SiteInstance* site_instance) {
++  extensions::ExtensionRegistry* registry = extensions::ExtensionRegistry::Get(browser_context_.get());
++  const extensions::Extension* extension = registry->enabled_extensions().GetExtensionOrAppByURL(site_instance->GetSiteURL());
++  if (extension) {
++    extensions::ProcessMap::Get(browser_context_.get())
++        ->Insert(extension->id(),
++                 site_instance->GetProcess()->GetID(),
++                 site_instance->GetId());
++  }
++}
++
++void AwContentBrowserClient::SiteInstanceDeleting(content::SiteInstance* site_instance) {
++  extensions::ExtensionRegistry* registry = extensions::ExtensionRegistry::Get(browser_context_.get());
++  const extensions::Extension* extension = registry->enabled_extensions().GetExtensionOrAppByURL(site_instance->GetSiteURL());
++  if (extension) {
++    extensions::ProcessMap::Get(browser_context_.get())
++        ->Remove(extension->id(),
++                 site_instance->GetProcess()->GetID(),
++                 site_instance->GetId());
++  }
++}
++
++void AwContentBrowserClient::OnWebContentsCreated(content::WebContents* web_contents) {
++  LOG(INFO) << "AwContentBrowserClient OnWebContentsCreated " << web_contents;
++  extensions::ShellExtensionWebContentsObserver::CreateForWebContents(web_contents);
++}
++
++void AwContentBrowserClient::GetAdditionalAllowedSchemesForFileSystem(std::vector<std::string>* additional_allowed_schemes) {
++  ContentBrowserClient::GetAdditionalAllowedSchemesForFileSystem(additional_allowed_schemes);
++  additional_allowed_schemes->push_back(extensions::kExtensionScheme);
++}
++
++std::unique_ptr<content::NavigationUIData> AwContentBrowserClient::GetNavigationUIData(content::NavigationHandle* navigation_handle) {
++  return std::make_unique<extensions::ShellNavigationUIData>(navigation_handle);
++}
++
++void AwContentBrowserClient::RegisterNonNetworkNavigationURLLoaderFactories(
++    int frame_tree_node_id,
++    ukm::SourceIdObj ukm_source_id,
++    NonNetworkURLLoaderFactoryMap* factories) {
++  DCHECK(factories);
++
++  content::WebContents* web_contents =
++      content::WebContents::FromFrameTreeNodeId(frame_tree_node_id);
++  factories->emplace(
++      extensions::kExtensionScheme,
++      extensions::CreateExtensionNavigationURLLoaderFactory(
++          web_contents->GetBrowserContext(), ukm_source_id,
++          !!extensions::WebViewGuest::FromWebContents(web_contents)));
++}
++
++void AwContentBrowserClient::RegisterNonNetworkWorkerMainResourceURLLoaderFactories(
++        content::BrowserContext* browser_context,
++        NonNetworkURLLoaderFactoryMap* factories) {
++  factories->emplace(
++      extensions::kExtensionScheme,
++      extensions::CreateExtensionWorkerMainResourceURLLoaderFactory(
++          browser_context));
++}
++
++void AwContentBrowserClient::RegisterNonNetworkServiceWorkerUpdateURLLoaderFactories(
++    content::BrowserContext* browser_context,
++    NonNetworkURLLoaderFactoryMap* factories) {
++  DCHECK(browser_context);
++  DCHECK(factories);
++
++  factories->emplace(
++      extensions::kExtensionScheme,
++      extensions::CreateExtensionServiceWorkerScriptURLLoaderFactory(
++          browser_context));
++}
++
++void AwContentBrowserClient::OverrideURLLoaderFactoryParams(
++    content::BrowserContext* browser_context,
++    const url::Origin& origin,
++    bool is_for_isolated_world,
++    network::mojom::URLLoaderFactoryParams* factory_params) {
++  extensions::URLLoaderFactoryManager::OverrideURLLoaderFactoryParams(browser_context, origin, is_for_isolated_world, factory_params);
++}
++
++void AwContentBrowserClient::RegisterBrowserInterfaceBindersForServiceWorker(
++    content::BrowserContext* browser_context,
++    mojo::BinderMapWithContext<const content::ServiceWorkerVersionBaseInfo&>* map) {
+ }
+ 
+ bool AwContentBrowserClient::IsExplicitNavigation(
+@@ -562,15 +674,19 @@ AwContentBrowserClient::CreateThrottlesForNavigation(
+   if (intercept_navigation_throttle)
+     throttles.push_back(std::move(intercept_navigation_throttle));
+ 
+-  throttles.push_back(std::make_unique<PolicyBlocklistNavigationThrottle>(
+-      navigation_handle,
+-      AwBrowserContext::FromWebContents(navigation_handle->GetWebContents())));
++  throttles.push_back(
++      std::make_unique<extensions::ExtensionNavigationThrottle>(navigation_handle));
+ 
++  //throttles.push_back(std::make_unique<PolicyBlocklistNavigationThrottle>(
++  //    navigation_handle,
++  //    AwBrowserContext::FromWebContents(navigation_handle->GetWebContents())));
+   std::unique_ptr<AwSafeBrowsingNavigationThrottle> safe_browsing_throttle =
+       AwSafeBrowsingNavigationThrottle::MaybeCreateThrottleFor(
+           navigation_handle);
+   if (safe_browsing_throttle)
+     throttles.push_back(std::move(safe_browsing_throttle));
++
++
+   return throttles;
+ }
+ 
+@@ -808,6 +924,10 @@ void AwContentBrowserClient::RegisterNonNetworkSubresourceURLLoaderFactories(
+             aw_browser_context->GetPath(),
+             aw_browser_context->GetSharedCorsOriginAccessList()));
+   }
++
++  factories->emplace(extensions::kExtensionScheme,
++                     extensions::CreateExtensionURLLoaderFactory(
++                         render_process_id, render_frame_id));
+ }
+ 
+ bool AwContentBrowserClient::ShouldAllowNoLongerUsedProcessToExit() {
+@@ -883,6 +1003,11 @@ bool AwContentBrowserClient::WillCreateURLLoaderFactory(
+   mojo::PendingReceiver<network::mojom::URLLoaderFactory> proxied_receiver;
+   mojo::PendingRemote<network::mojom::URLLoaderFactory> target_factory_remote;
+ 
++  auto* web_request_api = extensions::BrowserContextKeyedAPIFactory<extensions::WebRequestAPI>::Get(browser_context_.get());
++  bool use_proxy = web_request_api->MaybeProxyURLLoaderFactory(browser_context, frame, render_process_id, type, std::move(navigation_id), ukm_source_id, factory_receiver, header_client);
++  if (bypass_redirect_checks)
++    *bypass_redirect_checks = use_proxy;
++
+   if (factory_override) {
+     // We are interested in factories "inside" of CORS, so use
+     // |factory_override|.
+diff --git a/android_webview/browser/aw_content_browser_client.h b/android_webview/browser/aw_content_browser_client.h
+index 9a8d25ef859ca..5b214e733b6b0 100644
+--- a/android_webview/browser/aw_content_browser_client.h
++++ b/android_webview/browser/aw_content_browser_client.h
+@@ -66,6 +66,27 @@ class AwContentBrowserClient : public content::ContentBrowserClient {
+   AwBrowserContext* InitBrowserContext();
+ 
+   // content::ContentBrowserClient:
++  void SiteInstanceGotProcess(content::SiteInstance* site_instance) override;
++  void SiteInstanceDeleting(content::SiteInstance* site_instance) override;
++  void OnWebContentsCreated(content::WebContents* web_contents) override;
++  void GetAdditionalAllowedSchemesForFileSystem(std::vector<std::string>* additional_allowed_schemes) override;
++  void RegisterBrowserInterfaceBindersForServiceWorker(
++      content::BrowserContext* browser_context,
++      mojo::BinderMapWithContext<const content::ServiceWorkerVersionBaseInfo&>* map) override;
++  std::unique_ptr<content::NavigationUIData> GetNavigationUIData(content::NavigationHandle* navigation_handle) override;
++  void RegisterNonNetworkNavigationURLLoaderFactories(
++      int frame_tree_node_id,
++      ukm::SourceIdObj ukm_source_id,
++      NonNetworkURLLoaderFactoryMap* factories) override;
++  void RegisterNonNetworkServiceWorkerUpdateURLLoaderFactories(
++      content::BrowserContext* browser_context,
++      NonNetworkURLLoaderFactoryMap* factories) override;
++  void OverrideURLLoaderFactoryParams(
++      content::BrowserContext* browser_context,
++      const url::Origin& origin,
++      bool is_for_isolated_world,
++      network::mojom::URLLoaderFactoryParams* factory_params) override;
++
+   void OnNetworkServiceCreated(
+       network::mojom::NetworkService* network_service) override;
+   void ConfigureNetworkContextParams(
+@@ -194,6 +215,9 @@ class AwContentBrowserClient : public content::ContentBrowserClient {
+       content::RenderFrameHost* initiator_document,
+       mojo::PendingRemote<network::mojom::URLLoaderFactory>* out_factory)
+       override;
++  void RegisterNonNetworkWorkerMainResourceURLLoaderFactories(
++        content::BrowserContext* browser_context,
++        NonNetworkURLLoaderFactoryMap* factories) override;
+   void RegisterNonNetworkSubresourceURLLoaderFactories(
+       int render_process_id,
+       int render_frame_id,
+diff --git a/android_webview/browser/aw_content_browser_client_receiver_bindings.cc b/android_webview/browser/aw_content_browser_client_receiver_bindings.cc
+index 6802e6a210b71..12e5236829a39 100644
+--- a/android_webview/browser/aw_content_browser_client_receiver_bindings.cc
++++ b/android_webview/browser/aw_content_browser_client_receiver_bindings.cc
+@@ -24,6 +24,12 @@
+ #include "services/service_manager/public/cpp/binder_registry.h"
+ #include "third_party/blink/public/common/associated_interfaces/associated_interface_registry.h"
+ 
++#include "extensions/browser/event_router.h"
++#include "extensions/browser/extension_registry.h"
++#include "extensions/browser/extension_web_contents_observer.h"
++#include "extensions/browser/guest_view/extensions_guest_view.h"
++#include "extensions/browser/guest_view/web_view/web_view_guest.h"
++
+ #if BUILDFLAG(ENABLE_SPELLCHECK)
+ #include "components/spellcheck/browser/spell_check_host_impl.h"
+ #endif
+@@ -107,6 +113,14 @@ void AwContentBrowserClient::
+     RegisterAssociatedInterfaceBindersForRenderFrameHost(
+         content::RenderFrameHost& render_frame_host,
+         blink::AssociatedInterfaceRegistry& associated_registry) {
++
++  associated_registry.AddInterface(base::BindRepeating(
++      [](content::RenderFrameHost* render_frame_host,
++         mojo::PendingAssociatedReceiver<extensions::mojom::LocalFrameHost>
++             receiver) {
++        extensions::ExtensionWebContentsObserver::BindLocalFrameHost(std::move(receiver), render_frame_host);
++      },
++      &render_frame_host));
+   // TODO(lingqi): Swap the parameters so that lambda functions are not needed.
+   associated_registry.AddInterface(base::BindRepeating(
+       [](content::RenderFrameHost* render_frame_host,
+@@ -172,6 +186,13 @@ void AwContentBrowserClient::ExposeInterfacesToRenderer(
+               base::Unretained(this))),
+       content::GetUIThreadTaskRunner({}));
+ 
++  associated_registry->AddInterface(base::BindRepeating(
++      &extensions::EventRouter::BindForRenderer, render_process_host->GetID()));
++  associated_registry->AddInterface(base::BindRepeating(
++      &extensions::ExtensionsGuestView::CreateForComponents, render_process_host->GetID()));
++  associated_registry->AddInterface(base::BindRepeating(
++      &extensions::ExtensionsGuestView::CreateForExtensions, render_process_host->GetID()));
++
+ #if BUILDFLAG(ENABLE_SPELLCHECK)
+   auto create_spellcheck_host =
+       [](mojo::PendingReceiver<spellcheck::mojom::SpellCheckHost> receiver) {
+diff --git a/android_webview/common/BUILD.gn b/android_webview/common/BUILD.gn
+index 07c9ca2846017..f0d965ea3b08e 100644
+--- a/android_webview/common/BUILD.gn
++++ b/android_webview/common/BUILD.gn
+@@ -33,6 +33,10 @@ source_set("common") {
+     "metrics/app_package_name_logging_rule.h",
+     "url_constants.cc",
+     "url_constants.h",
++    "//extensions/shell/common/shell_extensions_client.cc",
++    "//extensions/shell/common/shell_extensions_client.h",
++    "//extensions/shell/common/shell_extensions_api_provider.cc",
++    "//extensions/shell/common/shell_extensions_api_provider.h",
+   ]
+   deps = [
+     "//android_webview:common_jni_headers",
+@@ -56,6 +60,7 @@ source_set("common") {
+     "//ui/gfx/ipc/geometry",
+     "//ui/gfx/ipc/skia",
+     "//url",
++    "//extensions/shell/common/api:extensions_features",
+   ]
+ }
+ 
+diff --git a/android_webview/common/aw_content_client.cc b/android_webview/common/aw_content_client.cc
+index f6cde310a4a4c..02feaa906deec 100644
+--- a/android_webview/common/aw_content_client.cc
++++ b/android_webview/common/aw_content_client.cc
+@@ -23,6 +23,7 @@
+ #include "mojo/public/cpp/bindings/pending_receiver.h"
+ #include "ui/base/l10n/l10n_util.h"
+ #include "ui/base/resource/resource_bundle.h"
++#include "extensions/common/constants.h"
+ 
+ namespace android_webview {
+ 
+@@ -36,6 +37,15 @@ void AwContentClient::AddAdditionalSchemes(Schemes* schemes) {
+   schemes->csp_bypassing_schemes.push_back(
+       android_webview::kAndroidWebViewVideoPosterScheme);
+   schemes->allow_non_standard_schemes_in_origins = true;
++
++  schemes->standard_schemes.push_back(extensions::kExtensionScheme);
++  schemes->savable_schemes.push_back(extensions::kExtensionScheme);
++  schemes->secure_schemes.push_back(extensions::kExtensionScheme);
++  schemes->cors_enabled_schemes.push_back(extensions::kExtensionScheme);
++  schemes->csp_bypassing_schemes.push_back(extensions::kExtensionScheme);
++  schemes->service_worker_schemes.push_back(extensions::kExtensionScheme);
++  schemes->service_worker_schemes.push_back(url::kFileScheme);
++  schemes->extension_schemes.push_back(extensions::kExtensionScheme);
+ }
+ 
+ std::u16string AwContentClient::GetLocalizedString(int message_id) {
+@@ -63,6 +73,10 @@ std::string AwContentClient::GetDataResourceString(int resource_id) {
+       resource_id);
+ }
+ 
++gfx::Image& AwContentClient::GetNativeImageNamed(int resource_id) {
++  return ui::ResourceBundle::GetSharedInstance().GetNativeImageNamed(resource_id);
++}
++
+ void AwContentClient::SetGpuInfo(const gpu::GPUInfo& gpu_info) {
+   gpu::SetKeysForCrashLogging(gpu_info);
+ }
+diff --git a/android_webview/common/aw_content_client.h b/android_webview/common/aw_content_client.h
+index 5fc5a46fb324e..b1806b8a41367 100644
+--- a/android_webview/common/aw_content_client.h
++++ b/android_webview/common/aw_content_client.h
+@@ -32,6 +32,7 @@ class AwContentClient : public content::ContentClient {
+       ui::ResourceScaleFactor scale_factor) override;
+   base::RefCountedMemory* GetDataResourceBytes(int resource_id) override;
+   std::string GetDataResourceString(int resource_id) override;
++  gfx::Image& GetNativeImageNamed(int resource_id) override;
+   void SetGpuInfo(const gpu::GPUInfo& gpu_info) override;
+   bool UsingSynchronousCompositing() override;
+   media::MediaDrmBridgeClient* GetMediaDrmBridgeClient() override;
+diff --git a/android_webview/lib/webview_entry_point.cc b/android_webview/lib/webview_entry_point.cc
+index 625fc06626552..8596091aaf7c3 100644
+--- a/android_webview/lib/webview_entry_point.cc
++++ b/android_webview/lib/webview_entry_point.cc
+@@ -6,6 +6,7 @@
+ #include "base/android/base_jni_onload.h"
+ #include "base/android/jni_android.h"
+ #include "base/android/library_loader/library_loader_hooks.h"
++#include "android_webview/crwebview/crwebview_jni_registration.h"
+ 
+ #if defined(WEBVIEW_INCLUDES_WEBLAYER)
+ #include "weblayer/app/jni_onload.h"
+@@ -50,6 +51,10 @@ JNI_EXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved) {
+   if (!weblayer::MaybeRegisterNatives())
+     return -1;
+ #endif
++  JNIEnv* env = base::android::AttachCurrentThread();
++  RegisterMainDexNatives(env);
++  RegisterNonMainDexNatives(env);
++
+   base::android::SetNativeInitializationHook(&NativeInit);
+   return JNI_VERSION_1_4;
+ }
+diff --git a/android_webview/renderer/BUILD.gn b/android_webview/renderer/BUILD.gn
+index f6d7efffd3d0f..485882b99d128 100644
+--- a/android_webview/renderer/BUILD.gn
++++ b/android_webview/renderer/BUILD.gn
+@@ -28,6 +28,8 @@ source_set("renderer") {
+     "aw_websocket_handshake_throttle_provider.h",
+     "browser_exposed_renderer_interfaces.cc",
+     "browser_exposed_renderer_interfaces.h",
++    "//extensions/shell/renderer/shell_extensions_renderer_client.cc",
++    "//extensions/shell/renderer/shell_extensions_renderer_client.h",
+   ]
+ 
+   deps = [
+diff --git a/android_webview/renderer/aw_content_renderer_client.cc b/android_webview/renderer/aw_content_renderer_client.cc
+index 43529e542a3ae..6421a732d7433 100644
+--- a/android_webview/renderer/aw_content_renderer_client.cc
++++ b/android_webview/renderer/aw_content_renderer_client.cc
+@@ -50,6 +50,12 @@
+ #include "components/spellcheck/renderer/spellcheck_provider.h"
+ #endif
+ 
++#include "extensions/common/extensions_client.h"
++#include "extensions/renderer/dispatcher.h"
++#include "extensions/renderer/extension_frame_helper.h"
++#include "extensions/shell/common/shell_extensions_client.h"
++#include "extensions/shell/renderer/shell_extensions_renderer_client.h"
++
+ using content::RenderThread;
+ 
+ namespace android_webview {
+@@ -68,12 +74,53 @@ void AwContentRendererClient::RenderThreadStarted() {
+   browser_interface_broker_ =
+       blink::Platform::Current()->GetBrowserInterfaceBroker();
+ 
++  extensions_client_.reset(new extensions::ShellExtensionsClient);
++  extensions::ExtensionsClient::Set(extensions_client_.get());
++  extensions_renderer_client_ = std::make_unique<extensions::ShellExtensionsRendererClient>();
++  extensions::ExtensionsRendererClient::Set(extensions_renderer_client_.get());
++
++  thread->AddObserver(extensions_renderer_client_->GetDispatcher());
+ #if BUILDFLAG(ENABLE_SPELLCHECK)
+   if (!spellcheck_)
+     spellcheck_ = std::make_unique<SpellCheck>(this);
+ #endif
+ }
+ 
++bool AwContentRendererClient::AllowScriptExtensionForServiceWorker (const url::Origin& script_origin) {
++  return true;
++}
++
++void AwContentRendererClient::DidInitializeServiceWorkerContextOnWorkerThread(
++      blink::WebServiceWorkerContextProxy* context_proxy,
++      const GURL& service_worker_scope,
++      const GURL& script_url) {
++  extensions_renderer_client_->GetDispatcher()->DidInitializeServiceWorkerContextOnWorkerThread(context_proxy, service_worker_scope, script_url);
++}
++
++void AwContentRendererClient::WillEvaluateServiceWorkerOnWorkerThread(
++      blink::WebServiceWorkerContextProxy* context_proxy,
++      v8::Local<v8::Context> v8_context,
++      int64_t service_worker_version_id,
++      const GURL& service_worker_scope,
++      const GURL& script_url) {
++  extensions_renderer_client_->GetDispatcher()->WillEvaluateServiceWorkerOnWorkerThread(context_proxy, v8_context, service_worker_version_id, service_worker_scope, script_url);
++}
++
++void AwContentRendererClient::DidStartServiceWorkerContextOnWorkerThread(
++      int64_t service_worker_version_id,
++      const GURL& service_worker_scope,
++      const GURL& script_url) {
++  extensions_renderer_client_->GetDispatcher()->DidStartServiceWorkerContextOnWorkerThread(service_worker_version_id, service_worker_scope, script_url);
++}
++
++void AwContentRendererClient::WillDestroyServiceWorkerContextOnWorkerThread(
++      v8::Local<v8::Context> context,
++      int64_t service_worker_version_id,
++      const GURL& service_worker_scope,
++      const GURL& script_url) {
++  extensions_renderer_client_->GetDispatcher()->WillDestroyServiceWorkerContextOnWorkerThread(context, service_worker_version_id, service_worker_scope, script_url);
++}
++
+ void AwContentRendererClient::ExposeInterfacesToBrowser(
+     mojo::BinderMap* binders) {
+   // NOTE: Do not add binders directly within this method. Instead, modify the
+@@ -160,6 +207,10 @@ void AwContentRendererClient::RenderFrameCreated(
+                                               render_frame->GetRoutingID());
+   }
+ 
++  extensions::Dispatcher* dispatcher = extensions_renderer_client_->GetDispatcher();
++  new extensions::ExtensionFrameHelper(render_frame, dispatcher);
++  dispatcher->OnRenderFrameCreated(render_frame);
++
+ #if BUILDFLAG(ENABLE_SPELLCHECK)
+   new SpellCheckProvider(render_frame, spellcheck_.get(), this);
+ #endif
+@@ -200,6 +251,13 @@ void AwContentRendererClient::RunScriptsAtDocumentStart(
+   js_injection::JsCommunication* communication =
+       js_injection::JsCommunication::Get(render_frame);
+   communication->RunScriptsAtDocumentStart();
++
++  extensions_renderer_client_->GetDispatcher()->RunScriptsAtDocumentStart(render_frame);
++}
++
++void AwContentRendererClient::RunScriptsAtDocumentEnd(
++    content::RenderFrame* render_frame) {
++  extensions_renderer_client_->GetDispatcher()->RunScriptsAtDocumentEnd(render_frame);
+ }
+ 
+ void AwContentRendererClient::GetSupportedKeySystems(
+diff --git a/android_webview/renderer/aw_content_renderer_client.h b/android_webview/renderer/aw_content_renderer_client.h
+index 37e01ff18acd8..836980e92bbf3 100644
+--- a/android_webview/renderer/aw_content_renderer_client.h
++++ b/android_webview/renderer/aw_content_renderer_client.h
+@@ -25,6 +25,10 @@ class SpellCheck;
+ namespace visitedlink {
+ class VisitedLinkReader;
+ }
++namespace extensions {
++class ExtensionsClient;
++class ShellExtensionsRendererClient;
++}
+ 
+ namespace android_webview {
+ 
+@@ -39,6 +43,27 @@ class AwContentRendererClient : public content::ContentRendererClient,
+   ~AwContentRendererClient() override;
+ 
+   // ContentRendererClient implementation.
++  bool AllowScriptExtensionForServiceWorker (const url::Origin& script_origin) override;
++  void DidInitializeServiceWorkerContextOnWorkerThread(
++      blink::WebServiceWorkerContextProxy* context_proxy,
++      const GURL& service_worker_scope,
++      const GURL& script_url) override ;
++  void WillEvaluateServiceWorkerOnWorkerThread(
++      blink::WebServiceWorkerContextProxy* context_proxy,
++      v8::Local<v8::Context> v8_context,
++      int64_t service_worker_version_id,
++      const GURL& service_worker_scope,
++      const GURL& script_url) override;
++  void DidStartServiceWorkerContextOnWorkerThread(
++      int64_t service_worker_version_id,
++      const GURL& service_worker_scope,
++      const GURL& script_url) override;
++  void WillDestroyServiceWorkerContextOnWorkerThread(
++      v8::Local<v8::Context> context,
++      int64_t service_worker_version_id,
++      const GURL& service_worker_scope,
++      const GURL& script_url) override;
++
+   void RenderThreadStarted() override;
+   void ExposeInterfacesToBrowser(mojo::BinderMap* binders) override;
+   void RenderFrameCreated(content::RenderFrame* render_frame) override;
+@@ -53,6 +78,7 @@ class AwContentRendererClient : public content::ContentRendererClient,
+   uint64_t VisitedLinkHash(const char* canonical_url, size_t length) override;
+   bool IsLinkVisited(uint64_t link_hash) override;
+   void RunScriptsAtDocumentStart(content::RenderFrame* render_frame) override;
++  void RunScriptsAtDocumentEnd(content::RenderFrame* render_frame) override;
+   void GetSupportedKeySystems(media::GetSupportedKeySystemsCB cb) override;
+   std::unique_ptr<blink::WebSocketHandshakeThrottleProvider>
+   CreateWebSocketHandshakeThrottleProvider() override;
+@@ -88,6 +114,9 @@ class AwContentRendererClient : public content::ContentRendererClient,
+ #if BUILDFLAG(ENABLE_SPELLCHECK)
+   std::unique_ptr<SpellCheck> spellcheck_;
+ #endif
++
++  std::unique_ptr<extensions::ExtensionsClient> extensions_client_;
++  std::unique_ptr<extensions::ShellExtensionsRendererClient> extensions_renderer_client_;
+ };
+ 
+ }  // namespace android_webview
