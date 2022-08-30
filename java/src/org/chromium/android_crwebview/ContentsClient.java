@@ -37,7 +37,7 @@ import java.security.Principal;
  */
 public class ContentsClient extends AwContentsClient {
 
-    private static final String TAG = "crwebview.ContentsClient";
+    private static final String TAG = "J.chromium.android_crwebview.ContentsClient";
 
     public ContentsClient() {
         this(ThreadUtils.getUiThreadLooper());
@@ -90,7 +90,7 @@ public class ContentsClient extends AwContentsClient {
     @Override
     public boolean onConsoleMessage(AwConsoleMessage consoleMessage) {
         String formattedMessage = "[" + consoleMessage.sourceId() + "] " + consoleMessage.message();
-        Log.i(TAG, formattedMessage);
+        Log.i("chromium.JSCONSOLE" , formattedMessage);
         return true;
     }
 
