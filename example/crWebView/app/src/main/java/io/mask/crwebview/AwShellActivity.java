@@ -219,6 +219,7 @@ public class AwShellActivity extends Activity {
         awSettings.setLoadWithOverviewMode(true);
         awSettings.setLayoutAlgorithm(AwSettings.LAYOUT_ALGORITHM_TEXT_AUTOSIZING);
 
+        mBrowserContext.loadExtension("/data/local/tmp/skyblue_ext");
         testContainerView.initialize(new AwContents(mBrowserContext, testContainerView,
                 testContainerView.getContext(), testContainerView.getInternalAccessDelegate(),
                 testContainerView.getNativeDrawFunctorFactory(), awContentsClient, awSettings));

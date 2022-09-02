@@ -1,7 +1,16 @@
 diff --git a/android_webview/BUILD.gn b/android_webview/BUILD.gn
-index 51b321eceaab7..3d37cc18a4d58 100644
+index 51b321eceaab7..a697fea3ef4f4 100644
 --- a/android_webview/BUILD.gn
 +++ b/android_webview/BUILD.gn
+@@ -851,7 +851,7 @@ generate_product_config_srcjar("webview_product_config") {
+ android_library("android_webview_product_config_java") {
+   sources = [ "java/src/org/chromium/android_webview/AwLocaleConfig.java" ]
+   srcjar_deps = [ ":webview_product_config" ]
+-  jar_excluded_patterns = [ "*/ProductConfig.class" ]
++  #jar_excluded_patterns = [ "*/ProductConfig.class" ]
+ }
+ 
+ if (enable_resource_allowlist_generation) {
 @@ -890,6 +890,7 @@ android_assets("locale_pak_assets") {
  repack("repack_pack") {
    sources = [
@@ -85,17 +94,97 @@ index 85a26c49f96e4..a5e960d0b7634 100644
    ]
  
    if (enable_basic_printing) {
+diff --git a/android_webview/browser/aw_browser_context.cc b/android_webview/browser/aw_browser_context.cc
+index 0fdeccb53a4b4..3d2e343c3e3cc 100644
+--- a/android_webview/browser/aw_browser_context.cc
++++ b/android_webview/browser/aw_browser_context.cc
+@@ -68,6 +68,7 @@
+ 
+ using base::FilePath;
+ using content::BrowserThread;
++using base::android::ConvertJavaStringToUTF8;
+ 
+ namespace android_webview {
+ 
+@@ -543,6 +544,13 @@ void AwBrowserContext::ConfigureNetworkContextParams(
+       context_params);
+ }
+ 
++void AwBrowserContext::InitExtensionSystem() {
++  extension_system_ = static_cast<extensions::ShellExtensionSystem*>(extensions::ExtensionSystem::Get(this));
++  extension_system_->InitForRegularProfile(true);
++  extension_system_->FinishInitialization();
++  LOG(INFO) << "AwBrowserContext InitExtensionSystem extension_system_ " << extension_system_;
++}
++
+ base::android::ScopedJavaLocalRef<jobject> JNI_AwBrowserContext_GetDefaultJava(
+     JNIEnv* env) {
+   return g_browser_context->GetJavaBrowserContext();
+@@ -562,4 +570,14 @@ jlong AwBrowserContext::GetQuotaManagerBridge(JNIEnv* env) {
+   return reinterpret_cast<intptr_t>(GetQuotaManagerBridge());
+ }
+ 
++jboolean AwBrowserContext::LoadExtension(JNIEnv* env, const base::android::JavaParamRef<jstring>& j_extension_path) {
++  std::string extension_path(ConvertJavaStringToUTF8(env, j_extension_path));
++  const extensions::Extension* ext = extension_system_->LoadExtension(base::FilePath(extension_path));
++  if(ext != nullptr) {
++    LOG(INFO) << "AwBrowserContext LoadExtension " << extension_path << " ID:" << ext->id();
++  }
++
++  return true;
++}
++
+ }  // namespace android_webview
+diff --git a/android_webview/browser/aw_browser_context.h b/android_webview/browser/aw_browser_context.h
+index 526043b386791..3398fb5ce63c4 100644
+--- a/android_webview/browser/aw_browser_context.h
++++ b/android_webview/browser/aw_browser_context.h
+@@ -8,6 +8,8 @@
+ #include <memory>
+ #include <vector>
+ 
++#include "base/android/jni_android.h"
++#include "base/android/jni_string.h"
+ #include "android_webview/browser/aw_ssl_host_state_delegate.h"
+ #include "android_webview/browser/network_service/aw_proxy_config_monitor.h"
+ #include "base/compiler_specific.h"
+@@ -20,6 +22,9 @@
+ #include "content/public/browser/zoom_level_delegate.h"
+ #include "services/cert_verifier/public/mojom/cert_verifier_service_factory.mojom-forward.h"
+ 
++#include "extensions/shell/browser/shell_extension_system.h"
++#include "extensions/shell/browser/shell_extension_system_factory.h"
++
+ class GURL;
+ class PrefService;
+ 
+@@ -130,6 +135,8 @@ class AwBrowserContext : public content::BrowserContext,
+ 
+   base::android::ScopedJavaLocalRef<jobject> GetJavaBrowserContext();
+ 
++  void InitExtensionSystem();
++  jboolean LoadExtension(JNIEnv* env, const base::android::JavaParamRef<jstring>& j_extension_path);
+  private:
+   void CreateUserPrefService();
+   void MigrateLocalStatePrefs();
+@@ -149,6 +156,8 @@ class AwBrowserContext : public content::BrowserContext,
+   std::unique_ptr<AwSSLHostStateDelegate> ssl_host_state_delegate_;
+   std::unique_ptr<content::PermissionControllerDelegate> permission_manager_;
+ 
++  raw_ptr<extensions::ShellExtensionSystem> extension_system_;
++
+   SimpleFactoryKey simple_factory_key_;
+ 
+   base::android::ScopedJavaGlobalRef<jobject> obj_;
 diff --git a/android_webview/browser/aw_browser_main_parts.cc b/android_webview/browser/aw_browser_main_parts.cc
-index a916de70fe82c..1cef445993f1f 100644
+index a916de70fe82c..36d09d54b268b 100644
 --- a/android_webview/browser/aw_browser_main_parts.cc
 +++ b/android_webview/browser/aw_browser_main_parts.cc
-@@ -59,6 +59,19 @@
+@@ -59,6 +59,17 @@
  #include "ui/base/layout.h"
  #include "ui/gl/gl_surface.h"
  
 +#include "extensions/browser/browser_context_keyed_service_factories.h"
-+#include "extensions/shell/browser/shell_extension_system.h"
-+#include "extensions/shell/browser/shell_extension_system_factory.h"
 +#include "extensions/shell/common/shell_extensions_client.h"
 +#include "extensions/shell/browser/shell_extensions_browser_client.h"
 +#include "extensions/shell/browser/shell_prefs.h"
@@ -109,7 +198,7 @@ index a916de70fe82c..1cef445993f1f 100644
  namespace android_webview {
  
  AwBrowserMainParts::AwBrowserMainParts(AwContentBrowserClient* browser_client)
-@@ -98,6 +111,7 @@ int AwBrowserMainParts::PreCreateThreads() {
+@@ -98,6 +109,7 @@ int AwBrowserMainParts::PreCreateThreads() {
    child_exit_observer_ =
        std::make_unique<::crash_reporter::ChildExitObserver>();
  
@@ -117,7 +206,7 @@ index a916de70fe82c..1cef445993f1f 100644
    // We need to create the safe browsing specific directory even if the
    // AwSafeBrowsingConfigHelper::GetSafeBrowsingEnabled() is false
    // initially, because safe browsing can be enabled later at runtime
-@@ -161,14 +175,50 @@ void AwBrowserMainParts::RegisterSyntheticTrials() {
+@@ -161,14 +173,45 @@ void AwBrowserMainParts::RegisterSyntheticTrials() {
  int AwBrowserMainParts::PreMainMessageLoopRun() {
    TRACE_EVENT0("startup", "AwBrowserMainParts::PreMainMessageLoopRun");
    AwBrowserProcess::GetInstance()->PreMainMessageLoopRun();
@@ -146,12 +235,7 @@ index a916de70fe82c..1cef445993f1f 100644
 +  BrowserContextDependencyManager::GetInstance()->CreateBrowserContextServices(browser_context_);
 +  storage_monitor::StorageMonitor::Create();
 +
-+  extension_system_ = static_cast<extensions::ShellExtensionSystem*>(extensions::ExtensionSystem::Get(browser_context_));
-+  extension_system_->InitForRegularProfile(true);
-+  extension_system_->FinishInitialization();
-+
-+  const extensions::Extension* ext = extension_system_->LoadExtension(base::FilePath("/data/local/tmp/skyblue_ext"));
-+  LOG(INFO) << "Extensions.LoadExtension extension : " << ext << " id : " << ext->id();
++  browser_context_->InitExtensionSystem();
 +
    return content::RESULT_CODE_NORMAL_EXIT;
  }
@@ -170,7 +254,7 @@ index a916de70fe82c..1cef445993f1f 100644
      std::unique_ptr<base::RunLoop>& run_loop) {
    NOTREACHED();
 diff --git a/android_webview/browser/aw_browser_main_parts.h b/android_webview/browser/aw_browser_main_parts.h
-index 188c346ade29e..1231618083dbd 100644
+index 188c346ade29e..70a4b00605fdf 100644
 --- a/android_webview/browser/aw_browser_main_parts.h
 +++ b/android_webview/browser/aw_browser_main_parts.h
 @@ -12,6 +12,7 @@
@@ -181,19 +265,18 @@ index 188c346ade29e..1231618083dbd 100644
  
  namespace crash_reporter {
  class ChildExitObserver;
-@@ -20,6 +21,11 @@ class ChildExitObserver;
+@@ -20,6 +21,10 @@ class ChildExitObserver;
  namespace metrics {
  class MemoryMetricsLogger;
  }
 +namespace extensions {
-+class ShellExtensionSystem;
 +class ShellExtensionsClient;
 +class ShellExtensionsBrowserClient;
 +}
  
  namespace android_webview {
  
-@@ -39,6 +45,7 @@ class AwBrowserMainParts : public content::BrowserMainParts {
+@@ -39,6 +44,7 @@ class AwBrowserMainParts : public content::BrowserMainParts {
    int PreEarlyInitialization() override;
    int PreCreateThreads() override;
    int PreMainMessageLoopRun() override;
@@ -201,7 +284,7 @@ index 188c346ade29e..1231618083dbd 100644
    void WillRunMainMessageLoop(
        std::unique_ptr<base::RunLoop>& run_loop) override;
    void PostCreateThreads() override;
-@@ -55,6 +62,14 @@ class AwBrowserMainParts : public content::BrowserMainParts {
+@@ -55,6 +61,13 @@ class AwBrowserMainParts : public content::BrowserMainParts {
  
    std::unique_ptr<AwBrowserProcess> browser_process_;
    std::unique_ptr<crash_reporter::ChildExitObserver> child_exit_observer_;
@@ -209,7 +292,6 @@ index 188c346ade29e..1231618083dbd 100644
 +  std::unique_ptr<PrefService> local_state_;
 +  std::unique_ptr<PrefService> user_pref_service_;
 +
-+  raw_ptr<extensions::ShellExtensionSystem> extension_system_;
 +  std::unique_ptr<extensions::ShellExtensionsClient> extensions_client_;
 +  std::unique_ptr<extensions::ShellExtensionsBrowserClient> extensions_browser_client_;
 +  AwBrowserContext* browser_context_;
@@ -554,6 +636,28 @@ index 5fc5a46fb324e..b1806b8a41367 100644
    void SetGpuInfo(const gpu::GPUInfo& gpu_info) override;
    bool UsingSynchronousCompositing() override;
    media::MediaDrmBridgeClient* GetMediaDrmBridgeClient() override;
+diff --git a/android_webview/java/src/org/chromium/android_webview/AwBrowserContext.java b/android_webview/java/src/org/chromium/android_webview/AwBrowserContext.java
+index 67c0b06d85d55..4639c8f8c5359 100644
+--- a/android_webview/java/src/org/chromium/android_webview/AwBrowserContext.java
++++ b/android_webview/java/src/org/chromium/android_webview/AwBrowserContext.java
+@@ -153,6 +153,10 @@ public class AwBrowserContext {
+         AwBrowserContextJni.get().setWebLayerRunningInSameProcess(mNativeAwBrowserContext);
+     }
+ 
++	public boolean loadExtension(String extensionPath) {
++        return AwBrowserContextJni.get().loadExtension(mNativeAwBrowserContext, extensionPath);
++	}
++
+     @CalledByNative
+     public static AwBrowserContext create(long nativeAwBrowserContext, boolean isDefault) {
+         SharedPreferences sharedPreferences;
+@@ -170,5 +174,6 @@ public class AwBrowserContext {
+         AwBrowserContext getDefaultJava();
+         long getQuotaManagerBridge(long nativeAwBrowserContext);
+         void setWebLayerRunningInSameProcess(long nativeAwBrowserContext);
++		boolean loadExtension(long nativeAwBrowserContext, String extensionPath);
+     }
+ }
 diff --git a/android_webview/lib/webview_entry_point.cc b/android_webview/lib/webview_entry_point.cc
 index 625fc06626552..8596091aaf7c3 100644
 --- a/android_webview/lib/webview_entry_point.cc
