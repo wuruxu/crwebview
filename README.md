@@ -1,2 +1,4 @@
 # crwebview
-another android webview from chromium source code, add chrome extensions support for android app.
+export android webview from chromium source code as aar sdk
+
+This project is for personal use only.
