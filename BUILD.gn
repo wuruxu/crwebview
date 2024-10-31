@@ -154,7 +154,7 @@ android_library("crwebview_java") {
     "//url:gurl_java",
   ]
 
-  srcjar_deps = [ ]
+  srcjar_deps = [ "//android_webview/crwebview:libcrwebview__jni_registration" ]
 
   proguard_configs = [ "proguard.flags" ]
   resources_package = "org.chromium.android_crwebview"
@@ -218,7 +218,6 @@ dist_aar("crwebview_aar") {
   #resource_included_patterns = [ "*/content/public/android/*" ]
   #resource_included_patterns = [ "*/ui/android/*", "*/android_webview/*" ]
 
-  #srcjar_deps = [ "//android_webview/crwebview:libcrwebview__jni_registration" ]
   #generate_final_jni = true
   native_libraries = [ "$root_build_dir/libcrwebview.so" ]
   # The aar should only include weblayer files. The client will provide the
