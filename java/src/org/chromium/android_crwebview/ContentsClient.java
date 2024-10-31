@@ -58,8 +58,7 @@ public class ContentsClient extends AwContentsClient {
     }
 
     @Override
-    public void onUnhandledKeyEvent(KeyEvent event) {
-    }
+    public void onUnhandledKeyEvent(KeyEvent event) {}
 
     @Override
     public void getVisitedHistory(Callback<String[]> callback) {}

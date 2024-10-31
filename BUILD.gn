@@ -2,16 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//base/android/jni_generator/config.gni")
-import("//build/config/android/config.gni")
+import("//android_webview/system_webview_apk_tmpl.gni")
+import("//android_webview/test/shared.gni")
+import("//android_webview/variables.gni")
 import("//build/config/android/rules.gni")
-import("//third_party/icu/config.gni")
-import("//tools/v8_context_snapshot/v8_context_snapshot.gni")
+import("//build/config/python.gni")
+import("//device/vr/buildflags/buildflags.gni")
+import("//testing/test.gni")
+import("//third_party/jni_zero/jni_zero.gni")
 
 crwebview_manifest = "$target_gen_dir/crwebview_manifest/AndroidManifest.xml"
 ui_android_manifest = "$target_gen_dir/ui_android_manifest/AndroidManifest.xml"
 content_android_manifest = "$target_gen_dir/content_android_manifest/AndroidManifest.xml"
-crwebview_jni_registration_header = "$target_gen_dir/crwebview_jni_registration.h"
+#crwebview_jni_registration_header = "$target_gen_dir/crwebview_jni_registration.h"
 
 jinja_template("crwebview_manifest") {
   input = "AndroidManifest.xml"
@@ -29,33 +32,29 @@ jinja_template("content_android_manifest") {
 }
 
 android_assets("crwebview_assets") {
+  disable_compression = true
   sources = [
     "assets/star.svg",
   ]
 
   deps = [
     "//android_webview:pak_file_assets",
+    "//gin:v8_snapshot_assets",
     "//third_party/icu:icu_assets",
   ]
-  disable_compression = true
-
-  if (use_v8_context_snapshot) {
-    deps += [ "//tools/v8_context_snapshot:v8_context_snapshot_assets" ]
-  } else {
-    deps += [ "//v8:v8_external_startup_data_assets" ]
-  }
 }
 
-generate_jni_registration("crwebview_jni_registration") {
-  targets = [ ":crwebview_java" ]
-  header_output = crwebview_jni_registration_header
-  sources_exclusions = [
-    "//components/crash/android/java/src/org/chromium/components/crash/CrashKeys.java",
+generate_jni("crwebview_jni_registration") {
+  sources = [
+    "java/src/org/chromium/android_crwebview/ContextManager.java"
   ]
 }
 
-android_library("crwebview_jni_java") {
+android_library("crwebview_draw_fn_impl_java") {
+  sources =
+      [ "java/src/org/chromium/android_crwebview/ContextManager.java" ]
   srcjar_deps = [ ":crwebview_jni_registration" ]
+  deps = [ "//third_party/jni_zero:jni_zero_java" ]
 }
 
 android_resources("crwebview_ui_resources") {
@@ -138,41 +137,40 @@ android_library("crwebview_java") {
 
   deps = [
     #":crwebview_assets",
-    ":crwebview_jni_java",
+    ":crwebview_draw_fn_impl_java",
     "//build/android:build_java",
     "//base:base_java",
-    "//base:jni_java",
     "//android_webview:android_webview_java",
     "//android_webview:android_webview_product_config_java",
     "//android_webview:common_java",
     "//android_webview:locale_pak_assets",
-    "//android_webview:platform_service_bridge_upstream_implementation_java",
-    "//android_webview/js_sandbox:js_sandbox_java",
     "//components/embedder_support/android:util_java",
     "//content/public/android:content_java",
     "//ui/android:ui_java",
     "//third_party/androidx:androidx_annotation_annotation_java",
+    "//third_party/androidx_javascriptengine:javascriptengine_java",
+    "//third_party/jni_zero:jni_zero_java",
+    "//ui/android:ui_java",
     "//url:gurl_java",
   ]
 
-  srcjar_deps = [
-  ]
+  srcjar_deps = [ ]
 
   proguard_configs = [ "proguard.flags" ]
   resources_package = "org.chromium.android_crwebview"
 }
 
-generate_jni("draw_fn_impl_jni_headers") {
-  sources = [ 
-    "java/src/org/chromium/android_crwebview/ContextManager.java"
-  ]
+#generate_jni("draw_fn_impl_jni_headers") {
+#  sources = [ 
+#    "java/src/org/chromium/android_crwebview/ContextManager.java"
+#  ]
+#
+#  deps = [
+#    "//base:base_java",
+#  ]
+#}
 
-  deps = [
-    "//base:base_java",
-  ]
-}
-
-shared_library("libcrwebview") {
+shared_library_with_jni("libcrwebview") {
   sources = [
     "java/src/draw_fn/allocator.cc",
     "java/src/draw_fn/allocator.h",
@@ -184,7 +182,7 @@ shared_library("libcrwebview") {
   ldflags = [ "-Wl,-shared,-Bsymbolic" ]
   deps = [
     ":crwebview_jni_registration",
-    ":draw_fn_impl_jni_headers",
+    "//third_party/jni_zero:jni_zero_java",
     "//android_webview/browser/gfx",
     "//android_webview/lib",
     "//android_webview/lib:webview_entry_point",
@@ -194,10 +192,12 @@ shared_library("libcrwebview") {
     "//gpu/vulkan",
     "//gpu/vulkan/init",
     "//gpu/vulkan/init:skia",
+    "//ui/gl",
   ]
   libs = [ "android" ]
   configs -= [ "//build/config/android:hide_all_but_jni_onload" ]
   configs += [ "//build/config/android:hide_all_but_jni" ]
+  java_targets = [ ":crwebview_java" ]
 }
 
 dist_aar("crwebview_aar") {
@@ -218,7 +218,8 @@ dist_aar("crwebview_aar") {
   #resource_included_patterns = [ "*/content/public/android/*" ]
   #resource_included_patterns = [ "*/ui/android/*", "*/android_webview/*" ]
 
-  generate_final_jni = true
+  #srcjar_deps = [ "//android_webview/crwebview:libcrwebview__jni_registration" ]
+  #generate_final_jni = true
   native_libraries = [ "$root_build_dir/libcrwebview.so" ]
   # The aar should only include weblayer files. The client will provide the
   # support library.
@@ -237,8 +238,8 @@ dist_aar("crwebview_aar") {
 
   # dist_aar does not take the manifest from libraries in deps, so we have to
   # specify again here.
-  android_manifest = crwebview_manifest
-  output = "$root_build_dir/android_crwebview.WebView-v1.0.0.aar"
+  android_manifest = "//android_webview/crwebview/AndroidManifest.xml"
+  output = "$root_build_dir/android_crwebview.WebView-v2.0.0.aar"
 }
 
 dist_aar("ui_resources_aar") {
