@@ -54,7 +54,9 @@ android_library("crwebview_draw_fn_impl_java") {
   sources =
       [ "java/src/org/chromium/android_crwebview/ContextManager.java" ]
   srcjar_deps = [ ":crwebview_jni_registration" ]
-  deps = [ "//third_party/jni_zero:jni_zero_java" ]
+  deps = [
+    "//third_party/jni_zero:jni_zero_java",
+  ]
 }
 
 android_resources("crwebview_ui_resources") {
@@ -129,32 +131,36 @@ android_resources("crwebview_ui_resources") {
 }
 
 android_library("crwebview_java") {
-  sources = [
-    "java/src/org/chromium/android_crwebview/WebView.java",
-    "java/src/org/chromium/android_crwebview/ContentsClient.java",
-    "java/src/org/chromium/android_crwebview/ContextManager.java",
-  ]
-
   deps = [
-    #":crwebview_assets",
     ":crwebview_draw_fn_impl_java",
-    "//build/android:build_java",
     "//base:base_java",
+    "//build/android:build_java",
+    "//third_party/jni_zero:jni_zero_java",
     "//android_webview:android_webview_java",
-    "//android_webview:android_webview_product_config_java",
     "//android_webview:common_java",
     "//android_webview:locale_pak_assets",
     "//components/embedder_support/android:util_java",
     "//content/public/android:content_java",
     "//ui/android:ui_java",
+    "//android_webview:android_webview_product_config_java",
     "//third_party/androidx:androidx_annotation_annotation_java",
     "//third_party/androidx_javascriptengine:javascriptengine_java",
-    "//third_party/jni_zero:jni_zero_java",
     "//ui/android:ui_java",
     "//url:gurl_java",
   ]
 
-  srcjar_deps = [ "//android_webview/crwebview:libcrwebview__jni_registration" ]
+  sources = [
+    "java/src/org/chromium/android_crwebview/WebView.java",
+    "java/src/org/chromium/android_crwebview/ContentsClient.java",
+    "java/src/org/chromium/android_crwebview/ContextManager.java",
+    "java/src/org/chromium/build/BuildConfig.java",
+    "java/src/org/chromium/android_webview/ProductConfig.java",
+    "java/src/org/chromium/build/NativeLibraries.java",
+  ]
+
+  srcjar_deps = [
+    "//android_webview/crwebview:libcrwebview__jni_registration",
+  ]
 
   proguard_configs = [ "proguard.flags" ]
   resources_package = "org.chromium.android_crwebview"
@@ -200,26 +206,38 @@ shared_library_with_jni("libcrwebview") {
   java_targets = [ ":crwebview_java" ]
 }
 
+copy("copy_snapshot_blob") {
+  sources = [ "$root_build_dir/snapshot_blob.bin" ]
+  outputs = [ "$target_gen_dir/snapshot_blob_64.bin" ]
+
+  deps = [ "//v8" ]
+}
+
 dist_aar("crwebview_aar") {
   deps = [
     ":crwebview_assets",
     ":libcrwebview",
     ":crwebview_java",
+    ":copy_snapshot_blob",
+    "//android_webview:repack_100_percent",
+    "//android_webview:repack_pack",
   ]
 
-  #jar_excluded_patterns = [ "androidx*.class", "android*.class", "javax*.class" ]
+  #jar_excluded_patterns = [
+  #  "*/androidx_annotation_annotation_jvm.processed.jar"
+  #]
   jar_included_patterns = [
     "org/chromium/*",
-    "J/*",
-    #"org/chromium/android_webview/*",
-    #"org/chromium/android_crwebview/*",
+    "org/jni_zero/*",
   ]
-  resource_included_patterns = [ "*/android_webview/crwebview/*" ]
+  resource_included_patterns = [ "*/res/devui/*" ]
+  #resource_included_patterns = [ "*/android_webview/crwebview/*" ]
   #resource_included_patterns = [ "*/content/public/android/*" ]
   #resource_included_patterns = [ "*/ui/android/*", "*/android_webview/*" ]
 
   #generate_final_jni = true
   native_libraries = [ "$root_build_dir/libcrwebview.so" ]
+  assets_files = [ "$target_gen_dir/snapshot_blob_64.bin", "$root_build_dir/gen/android_webview/chrome_100_percent.pak",  "$root_build_dir/gen/android_webview/resources.pak" ]
   # The aar should only include weblayer files. The client will provide the
   # support library.
   #jar_included_patterns = [
