@@ -199,6 +199,16 @@ shared_library_with_jni("libcrwebview") {
     "//gpu/vulkan/init",
     "//gpu/vulkan/init:skia",
     "//ui/gl",
+    "//android_webview/browser",
+    "//android_webview/browser/metrics",
+    "//android_webview/js_sandbox/service:js_sandbox",
+    "//components/component_updater/android:embedded_component_loader",
+    "//components/component_updater/android:embedded_component_loader_jni_headers",
+    "//components/embedder_support/android/metrics",
+    "//components/embedder_support/origin_trials",
+    "//content/public/common",
+    "//third_party/protobuf:protobuf_lite",
+
   ]
   libs = [ "android" ]
   configs -= [ "//build/config/android:hide_all_but_jni_onload" ]
@@ -221,15 +231,42 @@ dist_aar("crwebview_aar") {
     ":copy_snapshot_blob",
     "//android_webview:repack_100_percent",
     "//android_webview:repack_pack",
+    "//components/android_autofill/browser:java",
+    "//components/autofill/android:autofill_java",
+    "//components/autofill/core/common/mojom:mojo_types_java",
+    "//components/background_task_scheduler:background_task_scheduler_task_ids_java",
+    "//components/component_updater/android:component_provider_service_aidl_java",
+    "//components/component_updater/android:embedded_component_loader_java",
+    "//components/embedder_support/android:context_menu_java",
+    "//components/minidump_uploader:minidump_uploader_java",
+    "//components/policy/android:policy_java",
+    "//components/safe_browsing/android:safe_browsing_java",
+    "//components/sensitive_content:sensitive_content_features_java",
+    "//services/device/public/java:geolocation_java",
+    "//third_party/jni_zero:jni_zero_java",
+    "//third_party/androidx:androidx_privacysandbox_ads_ads_adservices_java",
+    "//third_party/androidx:androidx_privacysandbox_ads_ads_adservices_java_java",
+    "//third_party/androidx_javascriptengine:javascriptengine_common_java",
+    "//third_party/androidx_javascriptengine:javascriptengine_java",
+    "//ui/accessibility:ax_base_java",
   ]
 
-  #jar_excluded_patterns = [
-  #  "*/androidx_annotation_annotation_jvm.processed.jar"
-  #]
-  jar_included_patterns = [
-    "org/chromium/*",
-    "org/jni_zero/*",
+  jar_excluded_patterns = [
+    "META-INF/*",
+    "kotlin/*",
+    "kotlinx/*",
+    "org/intellij/*",
+    "org/jetbrains/*",
+    "androidx/*",
+    "android/support/*",
+    "com/google/*",
+    "DebugProbesKt.bin",
   ]
+  #jar_included_patterns = [
+  #  "org/chromium/*",
+  #  "org/jni_zero/*",
+  #  "J/N/*",
+  #]
   resource_included_patterns = [ "*/res/devui/*" ]
   #resource_included_patterns = [ "*/android_webview/crwebview/*" ]
   #resource_included_patterns = [ "*/content/public/android/*" ]
