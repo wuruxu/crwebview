@@ -12,6 +12,7 @@ import("//testing/test.gni")
 import("//third_party/jni_zero/jni_zero.gni")
 
 crwebview_manifest = "$target_gen_dir/crwebview_manifest/AndroidManifest.xml"
+crwebview_webkit_manifest = "$target_gen_dir/crwebview_webkit_manifest/AndroidManifest.xml"
 ui_android_manifest = "$target_gen_dir/ui_android_manifest/AndroidManifest.xml"
 content_android_manifest = "$target_gen_dir/content_android_manifest/AndroidManifest.xml"
 #crwebview_jni_registration_header = "$target_gen_dir/crwebview_jni_registration.h"
@@ -19,6 +20,12 @@ content_android_manifest = "$target_gen_dir/content_android_manifest/AndroidMani
 jinja_template("crwebview_manifest") {
   input = "AndroidManifest.xml"
   output = crwebview_manifest
+}
+
+jinja_template("crwebview_webkit_manifest") {
+  input = "crwebkitapp/AndroidManifest.xml.jinja2"
+  output = crwebview_webkit_manifest
+  variables = [ "manifest_package=com.github.webviewdemo" ]
 }
 
 jinja_template("ui_android_manifest") {
@@ -40,11 +47,11 @@ android_assets("crwebview_assets") {
   deps = [
     "//android_webview:pak_file_assets",
     "//gin:v8_snapshot_assets",
-    "//third_party/icu:icu_assets",
+    "//ui/android:ui_java_resources",
   ]
 }
 
-generate_jni("crwebview_jni_registration") {
+generate_jni("crwebview_jni_headers") {
   sources = [
     "java/src/org/chromium/android_crwebview/ContextManager.java"
   ]
@@ -53,7 +60,7 @@ generate_jni("crwebview_jni_registration") {
 android_library("crwebview_draw_fn_impl_java") {
   sources =
       [ "java/src/org/chromium/android_crwebview/ContextManager.java" ]
-  srcjar_deps = [ ":crwebview_jni_registration" ]
+  srcjar_deps = [ ":crwebview_jni_headers" ]
   deps = [
     "//third_party/jni_zero:jni_zero_java",
   ]
@@ -130,50 +137,33 @@ android_resources("crwebview_ui_resources") {
   custom_package = "org.chromium.android_crwebview"
 }
 
-android_library("crwebview_java") {
-  deps = [
-    ":crwebview_draw_fn_impl_java",
-    "//base:base_java",
-    "//build/android:build_java",
-    "//third_party/jni_zero:jni_zero_java",
-    "//android_webview:android_webview_java",
-    "//android_webview:common_java",
-    "//android_webview:locale_pak_assets",
-    "//components/embedder_support/android:util_java",
-    "//content/public/android:content_java",
-    "//ui/android:ui_java",
-    "//android_webview:android_webview_product_config_java",
-    "//third_party/androidx:androidx_annotation_annotation_java",
-    "//third_party/androidx_javascriptengine:javascriptengine_java",
-    "//ui/android:ui_java",
-    "//url:gurl_java",
-  ]
-
-  sources = [
-    "java/src/org/chromium/android_crwebview/WebView.java",
-    "java/src/org/chromium/android_crwebview/ContentsClient.java",
-    "java/src/org/chromium/android_crwebview/ContextManager.java",
-    "java/src/org/chromium/build/BuildConfig.java",
-    "java/src/org/chromium/android_webview/ProductConfig.java",
-    "java/src/org/chromium/build/NativeLibraries.java",
-  ]
-
-  srcjar_deps = [
-    "//android_webview/crwebview:libcrwebview__jni_registration",
-  ]
-
-  proguard_configs = [ "proguard.flags" ]
-  resources_package = "org.chromium.android_crwebview"
-}
-
-#generate_jni("draw_fn_impl_jni_headers") {
-#  sources = [ 
-#    "java/src/org/chromium/android_crwebview/ContextManager.java"
-#  ]
-#
+#android_library("crwebviewapp_java") {
 #  deps = [
 #    "//base:base_java",
+#    "//third_party/jni_zero:jni_zero_java",
+#    "//android_webview:android_webview_java",
+#    "//android_webview:common_java",
+#    "//components/embedder_support/android:util_java",
+#    "//content/public/android:content_java",
+#    "//android_webview:android_webview_product_config_java",
+#    "//third_party/androidx:androidx_annotation_annotation_java",
+#    "//third_party/androidx_javascriptengine:javascriptengine_java",
+#    "//ui/android:ui_java",
+#    "//url:gurl_java",
 #  ]
+#
+#  sources = [
+#    "java/src/org/chromium/android_crwebview/WebView.java",
+#    "java/src/org/chromium/android_crwebview/ContentsClient.java",
+#    "java/src/org/chromium/android_crwebview/ContextManager.java",
+#  ]
+#
+#  srcjar_deps = [
+#    "//android_webview/crwebview:libcrwebview__jni_registration",
+#  ]
+#
+#  proguard_configs = [ "proguard.flags" ]
+#  resources_package = "org.chromium.android_crwebview"
 #}
 
 shared_library_with_jni("libcrwebview") {
@@ -187,13 +177,14 @@ shared_library_with_jni("libcrwebview") {
   ]
   ldflags = [ "-Wl,-shared,-Bsymbolic" ]
   deps = [
-    ":crwebview_jni_registration",
+    ":crwebview_jni_headers",
     "//third_party/jni_zero:jni_zero_java",
     "//android_webview/browser/gfx",
     "//android_webview/lib",
     "//android_webview/lib:webview_entry_point",
     "//android_webview/nonembedded",
     "//android_webview/public",
+    "//build/android:build_java",
     "//base",
     "//gpu/vulkan",
     "//gpu/vulkan/init",
@@ -213,7 +204,7 @@ shared_library_with_jni("libcrwebview") {
   libs = [ "android" ]
   configs -= [ "//build/config/android:hide_all_but_jni_onload" ]
   configs += [ "//build/config/android:hide_all_but_jni" ]
-  java_targets = [ ":crwebview_java" ]
+  java_targets = [ ":crwebview_core_java" ]
 }
 
 copy("copy_snapshot_blob") {
@@ -223,14 +214,313 @@ copy("copy_snapshot_blob") {
   deps = [ "//v8" ]
 }
 
+android_resources("crwebview_apk_resources") {
+  sources = [
+    "crwebviewapp/res/layout/testshell_activity.xml",
+    "crwebviewapp/res/raw/resource_file.html",
+    "crwebviewapp/res/raw/resource_icon.png",
+    "crwebviewapp/res/values/config.xml",
+    "crwebviewapp/res/values/strings.xml",
+    "crwebviewapp/res/xml/provider_paths.xml",
+  ]
+}
+
+android_resources("crwebkit_apk_resources") {
+  sources = [
+    "crwebkitapp/res/mipmap-xhdpi/ic_launcher_round.webp",
+    "crwebkitapp/res/mipmap-xhdpi/ic_launcher.webp",
+    "crwebkitapp/res/mipmap-xxhdpi/ic_launcher_round.webp",
+    "crwebkitapp/res/mipmap-xxhdpi/ic_launcher.webp",
+    "crwebkitapp/res/mipmap-xxxhdpi/ic_launcher_round.webp",
+    "crwebkitapp/res/mipmap-xxxhdpi/ic_launcher.webp",
+    "crwebkitapp/res/mipmap-hdpi/ic_launcher_round.webp",
+    "crwebkitapp/res/mipmap-hdpi/ic_launcher.webp",
+    "crwebkitapp/res/mipmap-mdpi/ic_launcher_round.webp",
+    "crwebkitapp/res/mipmap-mdpi/ic_launcher.webp",
+    "crwebkitapp/res/xml/backup_rules.xml",
+    "crwebkitapp/res/xml/data_extraction_rules.xml",
+    "crwebkitapp/res/values-night/themes.xml",
+    "crwebkitapp/res/values/strings.xml",
+    "crwebkitapp/res/values/themes.xml",
+    "crwebkitapp/res/values/colors.xml",
+    "crwebkitapp/res/layout/activity_webkit.xml",
+    "crwebkitapp/res/mipmap-anydpi/ic_launcher.xml",
+    "crwebkitapp/res/mipmap-anydpi/ic_launcher_round.xml",
+    "crwebkitapp/res/drawable/ic_launcher_background.xml",
+    "crwebkitapp/res/drawable/ic_launcher_foreground.xml",
+  ]
+}
+
+android_apk("mydemoapp") {
+  target_sdk_version = 34
+  apk_name = "crWebViewApp"
+  deps = [
+    ":crwebview_assets",
+    ":crwebview_draw_fn_impl_java",
+    "//android_webview:android_webview_java",
+    "//android_webview:android_webview_product_config_java",
+    "//android_webview:common_java",
+    "//android_webview:locale_pak_assets",
+    "//android_webview:platform_service_bridge_upstream_implementation_java",
+    "//android_webview/crwebview:crwebview_apk_resources",
+    "//base:base_java",
+    "//components/embedder_support/android:util_java",
+    "//content/public/android:content_java",
+    "//third_party/androidx:androidx_annotation_annotation_java",
+    "//third_party/androidx_javascriptengine:javascriptengine_java",
+    "//third_party/jni_zero:jni_zero_java",
+    "//ui/android:ui_java",
+    "//url:gurl_java",
+  ]
+
+  android_manifest = "//android_webview/crwebview/crwebviewapp/AndroidManifest.xml"
+  sources = [
+    "java/src/org/chromium/android_crwebview/crWebView.java",
+    "java/src/org/chromium/android_crwebview/ContentsClient.java",
+    "crwebviewapp/java/com/github/crwebviewapp/AwShellApplication.java",
+    "crwebviewapp/java/com/github/crwebviewapp/AwShellActivity.java",
+    "crwebviewapp/java/com/github/crwebviewapp/AwShellResourceProvider.java",
+  ]
+  product_config_java_packages = [ webview_product_config_java_package ]
+
+  shared_resources = true
+  shared_libraries =
+      [ "//android_webview/crwebview:libcrwebview" ]
+  srcjar_deps = [ "//android_webview/crwebview:libcrwebview__jni_registration" ]
+
+  command_line_flags_file = "android-webview-command-line"
+}
+
+android_apk("crwebkitapp") {
+  target_sdk_version = 34
+  apk_name = "crWebKitApp"
+  deps = [
+    ":crwebview_assets",
+    ":crwebview_webkit_manifest",
+    "//android_webview/crwebview:crwebkit_apk_resources",
+    "//android_webview:android_webview_java",
+    "//android_webview:android_webview_product_config_java",
+    "//android_webview:common_java",
+    "//android_webview:locale_pak_assets",
+    "//android_webview/glue:glue_java",
+    "//android_webview:platform_service_bridge_upstream_implementation_java",
+    "//base:base_java",
+    "//components/embedder_support/android:util_java",
+    "//content/public/android:content_java",
+    "//third_party/androidx:androidx_annotation_annotation_java",
+    "//third_party/androidx:androidx_appcompat_appcompat_java",
+    "//third_party/androidx_javascriptengine:javascriptengine_java",
+    "//third_party/android_deps:material_design_java",
+    "//third_party/jni_zero:jni_zero_java",
+    "//ui/android:ui_java",
+    "//url:gurl_java",
+  ]
+
+  #android_manifest = "//android_webview/crwebview/crwebkitapp/AndroidManifest.xml"
+  android_manifest = crwebview_webkit_manifest
+  android_manifest_dep = ":crwebview_webkit_manifest"
+  sources = [
+    "crwebkitapp/java/com/github/webviewdemo/MainActivity.java",
+  ]
+  product_config_java_packages = [ webview_product_config_java_package ]
+
+  shared_resources = true
+  shared_libraries =
+      [ "//android_webview:libwebviewchromium" ]
+  srcjar_deps = [ "//android_webview:libwebviewchromium__jni_registration" ]
+
+  command_line_flags_file = "android-webview-command-line"
+}
+
+dist_jar("crwebview_base_jar") {
+  supports_android = true
+  requires_android = true
+
+  deps = [
+    ":libcrwebview__jni_registration",
+    "//android_webview:platform_service_bridge_upstream_implementation_java",
+    "//android_webview:android_webview_product_config_java",
+    "//third_party/jni_zero:jni_zero_java",
+  ]
+
+  jar_excluded_patterns = [
+    "META-INF/*",
+  ]
+
+  output = "$root_build_dir/crwebview_base.jar"
+}
+
+android_library("crwebkit_core_java") {
+  #supports_android = true
+  #requires_android = true
+  testonly = false
+
+  deps = [
+    #":crwebview_draw_fn_impl_java",
+    #"//base:base_java",
+    #"//third_party/jni_zero:jni_zero_java",
+    ##"//android_webview:android_webview_java",
+    #"//android_webview:browser_java",
+    #"//android_webview:crwebview_embedder_support_resources",
+    ##"//android_webview:crwebview_ui_android_resources",
+    #"//android_webview:crwebview_content_resources",
+    #"//components/embedder_support/android:util_java",
+    #"//content/public/android:content_java",
+    #"//android_webview:android_webview_product_config_java",
+    #"//android_webview:platform_service_bridge_upstream_implementation_java",
+    #"//android_webview/glue:glue_java",
+    "//third_party/androidx:androidx_annotation_annotation_java",
+    #"//third_party/androidx_javascriptengine:javascriptengine_java",
+    #"//url:gurl_java",
+  ]
+
+  sources = [
+    "java/src/org/chromium/android_crwebview/webkit/DownloadListener.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebChromeClient.java",
+    "java/src/org/chromium/android_crwebview/webkit/RenderProcessGoneDetail.java",
+    "java/src/org/chromium/android_crwebview/webkit/PluginList.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebViewFragment.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebHistoryItem.java",
+    "java/src/org/chromium/android_crwebview/webkit/CookieManager.java",
+    "java/src/org/chromium/android_crwebview/webkit/TokenBindingService.java",
+    "java/src/org/chromium/android_crwebview/webkit/JavascriptInterface.java",
+    "java/src/org/chromium/android_crwebview/webkit/URLUtil.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebMessagePort.java",
+    "java/src/org/chromium/android_crwebview/webkit/LegacyErrorStrings.java",
+    "java/src/org/chromium/android_crwebview/webkit/JsDialogHelper.java",
+    "java/src/org/chromium/android_crwebview/webkit/ServiceWorkerWebSettings.java",
+    "java/src/org/chromium/android_crwebview/webkit/HttpAuthHandler.java",
+    "java/src/org/chromium/android_crwebview/webkit/PermissionRequest.java",
+    "java/src/org/chromium/android_crwebview/webkit/Plugin.java",
+    "java/src/org/chromium/android_crwebview/webkit/DateSorter.java",
+    "java/src/org/chromium/android_crwebview/webkit/ServiceWorkerController.java",
+    "java/src/org/chromium/android_crwebview/webkit/ConsoleMessage.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebViewDatabase.java",
+    "java/src/org/chromium/android_crwebview/webkit/SslErrorHandler.java",
+    "java/src/org/chromium/android_crwebview/webkit/UrlInterceptRegistry.java",
+    "java/src/org/chromium/android_crwebview/webkit/JsPromptResult.java",
+    "java/src/org/chromium/android_crwebview/webkit/ServiceWorkerClient.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebResourceResponse.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebSyncManager.java",
+    "java/src/org/chromium/android_crwebview/webkit/MimeTypeMap.java",
+    "java/src/org/chromium/android_crwebview/webkit/ValueCallback.java",
+    "java/src/org/chromium/android_crwebview/webkit/PluginData.java",
+    "java/src/org/chromium/android_crwebview/webkit/PluginStub.java",
+    "java/src/org/chromium/android_crwebview/webkit/ClientCertRequest.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebResourceRequest.java",
+    "java/src/org/chromium/android_crwebview/webkit/UrlInterceptHandler.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebSettings.java",
+    "java/src/org/chromium/android_crwebview/webkit/JsResult.java",
+    "java/src/org/chromium/android_crwebview/webkit/CookieSyncManager.java",
+    "java/src/org/chromium/android_crwebview/webkit/CacheManager.java",
+    "java/src/org/chromium/android_crwebview/webkit/PacProcessor.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebViewFactoryProvider.java",
+    "java/src/org/chromium/android_crwebview/webkit/UserPackage.java",
+    "java/src/org/chromium/android_crwebview/webkit/GeolocationPermissions.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebBackForwardList.java",
+    "java/src/org/chromium/android_crwebview/webkit/TracingController.java",
+    "java/src/org/chromium/android_crwebview/webkit/FindAddress.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebViewClient.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebViewDelegate.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebMessage.java",
+    "java/src/org/chromium/android_crwebview/webkit/TracingConfig.java",
+    "java/src/org/chromium/android_crwebview/webkit/FindActionModeCallback.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebViewFactory.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebStorage.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebIconDatabase.java",
+    "java/src/org/chromium/android_crwebview/webkit/SafeBrowsingResponse.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebView.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebViewProvider.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebViewRenderProcess.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebResourceError.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebViewRenderProcessClient.java",
+  ]
+}
+
+java_library("webkit_copy_java") {
+  supports_android = true
+  requires_android = true
+
+  deps = [
+    "//android_webview:crwebview_embedder_support_resources",
+    "//android_webview:crwebview_content_resources",
+    "//android_webview:platform_service_bridge_upstream_implementation_java",
+  ]
+
+  sources = [
+    "../glue/java/src/org/chromium/build/NativeLibraries.java",
+    "../glue/java/src/org/chromium/android_webview/ProductConfig.java",
+    "../glue/java/src/org/chromium/build/BuildConfig.java",
+  ]
+
+  srcjars = [
+  #  "../glue/java/src/webkit_compile_resources.srcjar",
+  ]
+
+  srcjar_deps = [
+    "//android_webview:libwebviewchromium__jni_registration",
+  ]
+}
+
+java_library("crwebview_core_java") {
+  supports_android = true
+  requires_android = true
+
+  deps = [
+    ":crwebview_draw_fn_impl_java",
+    "//base:base_java",
+    "//third_party/jni_zero:jni_zero_java",
+    #"//android_webview:android_webview_java",
+    "//android_webview:browser_java",
+    "//android_webview:crwebview_embedder_support_resources",
+    #"//android_webview:crwebview_ui_android_resources",
+    "//android_webview:crwebview_content_resources",
+    "//components/embedder_support/android:util_java",
+    "//content/public/android:content_java",
+    "//android_webview:android_webview_product_config_java",
+    "//android_webview:platform_service_bridge_upstream_implementation_java",
+    "//third_party/androidx:androidx_annotation_annotation_java",
+    "//third_party/androidx_javascriptengine:javascriptengine_java",
+    "//url:gurl_java",
+  ]
+
+  sources = [
+    "java/src/org/chromium/android_crwebview/crWebView.java",
+    "java/src/org/chromium/android_crwebview/CallbackConverter.java",
+    "java/src/org/chromium/android_crwebview/ContentsClient.java",
+    "java/src/org/chromium/android_crwebview/ContextManager.java",
+    "java/src/org/chromium/build/NativeLibraries.java",
+    "java/src/org/chromium/android_webview/ProductConfig.java",
+    "java/src/org/chromium/build/BuildConfig.java",
+  ]
+
+  srcjars = [
+    "java/src/compile_resources.srcjar",
+  ]
+  srcjar_deps = [
+    "//android_webview/crwebview:libcrwebview__jni_registration",
+  ]
+
+  proguard_configs = [ ]
+
+  #resources_package = "org.chromium.android_crwebview"
+}
+
 dist_aar("crwebview_aar") {
   deps = [
     ":crwebview_assets",
     ":libcrwebview",
-    ":crwebview_java",
+    ":crwebview_core_java",
+    #":crwebkit_core_java",
     ":copy_snapshot_blob",
-    "//android_webview:repack_100_percent",
-    "//android_webview:repack_pack",
+    "//android_webview:locale_pak_assets",
+    "//android_webview/glue:glue_java",
+    #"//android_webview:pak_file_assets",
+    #"//android_webview:weblayer_webview_assets",
+    #"//android_webview:repack_locales",
+    #"//android_webview:repack_100_percent",
+    #"//android_webview:repack_pack",
+    #"//android_webview:platform_service_bridge_upstream_implementation_java",
     "//components/android_autofill/browser:java",
     "//components/autofill/android:autofill_java",
     "//components/autofill/core/common/mojom:mojo_types_java",
@@ -243,12 +533,12 @@ dist_aar("crwebview_aar") {
     "//components/safe_browsing/android:safe_browsing_java",
     "//components/sensitive_content:sensitive_content_features_java",
     "//services/device/public/java:geolocation_java",
-    "//third_party/jni_zero:jni_zero_java",
     "//third_party/androidx:androidx_privacysandbox_ads_ads_adservices_java",
     "//third_party/androidx:androidx_privacysandbox_ads_ads_adservices_java_java",
     "//third_party/androidx_javascriptengine:javascriptengine_common_java",
     "//third_party/androidx_javascriptengine:javascriptengine_java",
     "//ui/accessibility:ax_base_java",
+    "//content/public/android:content_java_resources",
   ]
 
   jar_excluded_patterns = [
@@ -267,14 +557,24 @@ dist_aar("crwebview_aar") {
   #  "org/jni_zero/*",
   #  "J/N/*",
   #]
-  resource_included_patterns = [ "*/res/devui/*" ]
-  #resource_included_patterns = [ "*/android_webview/crwebview/*" ]
-  #resource_included_patterns = [ "*/content/public/android/*" ]
-  #resource_included_patterns = [ "*/ui/android/*", "*/android_webview/*" ]
+  resource_included_patterns = [
+    "*/android_webview/*",
+    #"obj/components/embedder_support/android/*",
+    #"obj/android_webview/*",
+    #"obj/components/embedder_support/android/*",
+    #"obj/ui/android/*",
+    #"obj/third_party/android_deps/*",
+    #"obj/components/browser_ui/widget/android/*",
+    #"obj/components/autofill/android/*",
+    #"obj/content/public/android/*",
+    #"obj/ui/*",
+    #"obj/media/base/android/media*",
+  ]
 
   #generate_final_jni = true
+  #shared_resources = true
   native_libraries = [ "$root_build_dir/libcrwebview.so" ]
-  assets_files = [ "$target_gen_dir/snapshot_blob_64.bin", "$root_build_dir/gen/android_webview/chrome_100_percent.pak",  "$root_build_dir/gen/android_webview/resources.pak" ]
+
   # The aar should only include weblayer files. The client will provide the
   # support library.
   #jar_included_patterns = [
@@ -296,28 +596,115 @@ dist_aar("crwebview_aar") {
   output = "$root_build_dir/android_crwebview.WebView-v2.0.0.aar"
 }
 
+dist_aar("crwebkit_aar") {
+  deps = [
+    ":crwebview_assets",
+    ":webkit_copy_java",
+    ":copy_snapshot_blob",
+    "//android_webview:locale_pak_assets",
+    "//android_webview:libwebviewchromium",
+    "//android_webview/glue:glue_java",
+    #"//android_webview:webkit_glue_java",
+    #"//android_webview/crwebview:webkit_copy_java",
+    #"//android_webview:pak_file_assets",
+    #"//android_webview:weblayer_webview_assets",
+    #"//android_webview:repack_locales",
+    #"//android_webview:repack_100_percent",
+    #"//android_webview:repack_pack",
+    #"//android_webview:platform_service_bridge_upstream_implementation_java",
+    "//components/android_autofill/browser:java",
+    "//components/autofill/android:autofill_java",
+    "//components/autofill/core/common/mojom:mojo_types_java",
+    "//components/background_task_scheduler:background_task_scheduler_task_ids_java",
+    "//components/component_updater/android:component_provider_service_aidl_java",
+    "//components/component_updater/android:embedded_component_loader_java",
+    "//components/embedder_support/android:context_menu_java",
+    "//components/embedder_support/android:web_contents_delegate_java",
+    "//components/minidump_uploader:minidump_uploader_java",
+    "//components/policy/android:policy_java",
+    "//components/safe_browsing/android:safe_browsing_java",
+    "//components/sensitive_content:sensitive_content_features_java",
+    "//services/device/public/java:geolocation_java",
+    "//third_party/androidx:androidx_privacysandbox_ads_ads_adservices_java",
+    "//third_party/androidx:androidx_privacysandbox_ads_ads_adservices_java_java",
+    "//third_party/androidx_javascriptengine:javascriptengine_common_java",
+    "//third_party/androidx_javascriptengine:javascriptengine_java",
+    "//ui/accessibility:ax_base_java",
+    "//content/public/android:content_java_resources",
+  ]
+
+  jar_excluded_patterns = [
+    "META-INF/*",
+    "kotlin/*",
+    "kotlinx/*",
+    "org/intellij/*",
+    "org/jetbrains/*",
+    "androidx/*",
+    "android/support/*",
+    "com/google/*",
+    "DebugProbesKt.bin",
+  ]
+  #jar_included_patterns = [
+  #  "org/chromium/*",
+  #  "org/jni_zero/*",
+  #  "J/N/*",
+  #]
+  resource_included_patterns = [
+    "not_include_any_resources",
+  ]
+
+  #generate_final_jni = true
+  #shared_resources = true
+  native_libraries = [ "$root_build_dir/libwebviewchromium.so" ]
+
+  # The aar should only include weblayer files. The client will provide the
+  # support library.
+  #jar_included_patterns = [
+  #  "org/chromium/weblayer/*",
+  #  "org/chromium/weblayer_private/*",
+  #]
+
+  # R files are excluded because they are not used in the client lib and depend
+  # on other generated chromium R classes.
+  #jar_excluded_patterns = [
+  #  "org/chromium/weblayer/client/R\$*.class",
+  #  "org/chromium/weblayer/client/R.class",
+  #]
+
+  # dist_aar does not take the manifest from libraries in deps, so we have to
+  # specify again here.
+  android_manifest = "//android_webview/crwebview/webkit_AndroidManifest.xml"
+  output = "$root_build_dir/android_crwebview_webkit.WebView-v2.0.0.aar"
+}
+
 dist_aar("ui_resources_aar") {
   deps = [
     ":ui_android_manifest",
-    "//ui/android:ui_java_resources",
+    "//ui/android:ui_no_recycler_view_java",
+    #"//ui/android:ui_java_resources",
   ]
 
   jar_included_patterns = [
+    "not_include_any_jar",
   ]
-  resource_included_patterns = [ "*/ui/android/*" ]
+  resource_included_patterns = [ "obj/ui/android/*" ]
   android_manifest = ui_android_manifest
-  output = "$root_build_dir/ui-android-resources-v1.0.0.aar"
+  output = "$root_build_dir/ui-android-resources-v2.0.0.aar"
 }
 
 dist_aar("content_resources_aar") {
   deps = [
     ":content_android_manifest",
-    "//content/public/android:content_java_resources",
+    "//content/public/android:content_full_java",
   ]
 
   jar_included_patterns = [
+    "not_include_any_jar",
   ]
-  resource_included_patterns = [ "*/content/public/android/*" ]
+  resource_included_patterns = [
+    "obj/content/public/android/*",
+    #"obj/ui/android/*",
+  ]
   android_manifest = content_android_manifest
-  output = "$root_build_dir/content-android-resources-v1.0.0.aar"
+  output = "$root_build_dir/content-android-resources-v2.0.0.aar"
 }
