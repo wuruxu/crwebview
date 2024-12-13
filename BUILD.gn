@@ -638,17 +638,18 @@ dist_aar("crwebkit_aar") {
     "kotlin/*",
     "kotlinx/*",
     "org/intellij/*",
-    "org/jetbrains/*",
+    "org/jetbrains/annotations/*",
+    "org/checkerframework/*",
     "androidx/*",
+    "javax/annotation/*",
     "android/support/*",
     "com/google/*",
     "DebugProbesKt.bin",
+    "_COROUTINE*",
+    "*.properties",
   ]
-  #jar_included_patterns = [
-  #  "org/chromium/*",
-  #  "org/jni_zero/*",
-  #  "J/N/*",
-  #]
+  jar_included_patterns = [
+  ]
   resource_included_patterns = [
     "not_include_any_resources",
   ]
