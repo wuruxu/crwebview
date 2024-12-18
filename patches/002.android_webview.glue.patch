@@ -1,0 +1,1161 @@
+diff --git a/android_webview/glue/BUILD.gn b/android_webview/glue/BUILD.gn
+index 40a18737b5d0e..86b5ceae05168 100644
+--- a/android_webview/glue/BUILD.gn
++++ b/android_webview/glue/BUILD.gn
+@@ -11,6 +11,7 @@ android_library("glue_java") {
+   resources_package = "org.chromium.android_webview"
+   deps = [
+     "//android_webview:android_webview_product_config_java",
++    "//android_webview:webkit_glue_java",
+     "//android_webview:browser_java",
+     "//android_webview:common_java",
+     "//android_webview:resources",
+@@ -26,6 +27,7 @@ android_library("glue_java") {
+     "//content/public/android:content_util_java",
+     "//net/android:net_java",
+     "//third_party/androidx:androidx_annotation_annotation_java",
++    "//third_party/android_deps:com_android_support_support_annotations_java",
+     "//third_party/jni_zero:jni_zero_java",
+     "//ui/android:ui_no_recycler_view_java",
+     "//url:gurl_java",
+@@ -36,7 +38,7 @@ android_library("glue_java") {
+ 
+   sources = [
+     "java/src/com/android/webview/chromium/AndroidXProcessGlobalConfig.java",
+-    "java/src/com/android/webview/chromium/ApiImplementationLogger.java",
++    #"java/src/com/android/webview/chromium/ApiImplementationLogger.java",
+     "java/src/com/android/webview/chromium/CallbackConverter.java",
+     "java/src/com/android/webview/chromium/ContentSettingsAdapter.java",
+     "java/src/com/android/webview/chromium/CookieManagerAdapter.java",
+@@ -90,4 +92,8 @@ android_library("glue_java") {
+     "java/src/com/android/webview/chromium/WebViewRenderProcessClientAdapter.java",
+     "java/src/com/android/webview/chromium/WebkitToSharedGlueConverter.java",
+   ]
++
++  #srcjar_deps = [
++  #  "//android_webview:libwebviewchromium__jni_registration",
++  #]
+ }
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/CallbackConverter.java b/android_webview/glue/java/src/com/android/webview/chromium/CallbackConverter.java
+index a2a0f7feb4874..17738655a3720 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/CallbackConverter.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/CallbackConverter.java
+@@ -4,7 +4,7 @@
+ 
+ package com.android.webview.chromium;
+ 
+-import android.webkit.ValueCallback;
++import org.chromium.android_crwebview.webkit.ValueCallback;
+ 
+ import org.chromium.android_webview.common.Lifetime;
+ import org.chromium.base.Callback;
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/ContentSettingsAdapter.java b/android_webview/glue/java/src/com/android/webview/chromium/ContentSettingsAdapter.java
+index 112ce6c111100..fab99375d9d16 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/ContentSettingsAdapter.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/ContentSettingsAdapter.java
+@@ -5,11 +5,11 @@
+ package com.android.webview.chromium;
+ 
+ import android.annotation.SuppressLint;
+-import android.webkit.WebSettings;
+-import android.webkit.WebSettings.LayoutAlgorithm;
+-import android.webkit.WebSettings.PluginState;
+-import android.webkit.WebSettings.RenderPriority;
+-import android.webkit.WebSettings.ZoomDensity;
++import org.chromium.android_crwebview.webkit.WebSettings;
++import org.chromium.android_crwebview.webkit.WebSettings.LayoutAlgorithm;
++import org.chromium.android_crwebview.webkit.WebSettings.PluginState;
++import org.chromium.android_crwebview.webkit.WebSettings.RenderPriority;
++import org.chromium.android_crwebview.webkit.WebSettings.ZoomDensity;
+ 
+ import com.android.webview.chromium.WebViewChromium.ApiCall;
+ 
+@@ -23,7 +23,7 @@ import org.chromium.base.TraceEvent;
+  * {@link org.chromium.android_webview.AwSettings}.
+  */
+ @SuppressWarnings({"deprecation", "NoSynchronizedMethodCheck"})
+-public class ContentSettingsAdapter extends android.webkit.WebSettings {
++public class ContentSettingsAdapter extends org.chromium.android_crwebview.webkit.WebSettings {
+     private static final String TAG = "WebSettings";
+     private AwSettings mAwSettings;
+     private PluginState mPluginState = PluginState.OFF;
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/CookieManagerAdapter.java b/android_webview/glue/java/src/com/android/webview/chromium/CookieManagerAdapter.java
+index 90d343c511c1b..ec6436ee2aca0 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/CookieManagerAdapter.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/CookieManagerAdapter.java
+@@ -4,9 +4,9 @@
+ 
+ package com.android.webview.chromium;
+ 
+-import android.webkit.CookieManager;
+-import android.webkit.ValueCallback;
+-import android.webkit.WebView;
++import org.chromium.android_crwebview.webkit.CookieManager;
++import org.chromium.android_crwebview.webkit.ValueCallback;
++import org.chromium.android_crwebview.webkit.WebView;
+ 
+ import com.android.webview.chromium.WebViewChromium.ApiCall;
+ 
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/DrawFunctor.java b/android_webview/glue/java/src/com/android/webview/chromium/DrawFunctor.java
+index ad711120e62c7..881798263bddb 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/DrawFunctor.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/DrawFunctor.java
+@@ -16,6 +16,7 @@ class DrawFunctor {
+     // The Android framework performs manual JNI registration on these methods, so the method
+     // signatures cannot change without updating the framework. We use @UsedByReflection, while not
+     // technically true, as a way to preserve these methods and their names.
++    //TODO replace with sdk
+     @UsedByReflection("Android framework manual registration")
+     private static native long nativeGetFunctionTable();
+ }
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/DrawGLFunctor.java b/android_webview/glue/java/src/com/android/webview/chromium/DrawGLFunctor.java
+index 331628e1cb4ca..7bdb079d6e241 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/DrawGLFunctor.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/DrawGLFunctor.java
+@@ -6,7 +6,9 @@ package com.android.webview.chromium;
+ 
+ import android.graphics.Canvas;
+ import android.view.View;
+-import android.webkit.WebViewDelegate;
++import android.util.Log;
++//import android.webkit.WebViewDelegateWrapper;
++import android.webkit.WebViewDelegateWrapper;
+ 
+ import org.chromium.android_webview.AwContents;
+ import org.chromium.build.annotations.UsedByReflection;
+@@ -18,11 +20,13 @@ import org.chromium.build.annotations.UsedByReflection;
+  */
+ class DrawGLFunctor implements AwContents.NativeDrawGLFunctor {
+     // Pointer to native side instance
+-    private final WebViewDelegate mWebViewDelegate;
++    private final WebViewDelegateWrapper mWebViewDelegate;
+     private long mNativeDrawGLFunctor;
+ 
+-    public DrawGLFunctor(long viewContext, WebViewDelegate webViewDelegate) {
++    public DrawGLFunctor(long viewContext, WebViewDelegateWrapper webViewDelegate) {
++Log.i("crWebView", "DrawGLFunctor DrawGLFunctor called");
+         mNativeDrawGLFunctor = nativeCreateGLFunctor(viewContext);
++Log.i("crWebView", "DrawGLFunctor DrawGLFunctor called " + mNativeDrawGLFunctor);
+         mWebViewDelegate = webViewDelegate;
+     }
+ 
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/GeolocationPermissionsAdapter.java b/android_webview/glue/java/src/com/android/webview/chromium/GeolocationPermissionsAdapter.java
+index f2e2ba9a0611f..8cda870b2fae7 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/GeolocationPermissionsAdapter.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/GeolocationPermissionsAdapter.java
+@@ -4,8 +4,8 @@
+ 
+ package com.android.webview.chromium;
+ 
+-import android.webkit.GeolocationPermissions;
+-import android.webkit.ValueCallback;
++import org.chromium.android_crwebview.webkit.GeolocationPermissions;
++import org.chromium.android_crwebview.webkit.ValueCallback;
+ 
+ import com.android.webview.chromium.WebViewChromium.ApiCall;
+ 
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/GlueApiHelperForOMR1.java b/android_webview/glue/java/src/com/android/webview/chromium/GlueApiHelperForOMR1.java
+index 62f3bf4552fe2..49c06d6300524 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/GlueApiHelperForOMR1.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/GlueApiHelperForOMR1.java
+@@ -5,8 +5,8 @@
+ package com.android.webview.chromium;
+ 
+ import android.os.Build;
+-import android.webkit.WebView;
+-import android.webkit.WebViewClient;
++import org.chromium.android_crwebview.webkit.WebView;
++import org.chromium.android_crwebview.webkit.WebViewClient;
+ 
+ import androidx.annotation.RequiresApi;
+ 
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/GlueApiHelperForP.java b/android_webview/glue/java/src/com/android/webview/chromium/GlueApiHelperForP.java
+index 76782e6231d45..494d1035d283e 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/GlueApiHelperForP.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/GlueApiHelperForP.java
+@@ -5,8 +5,9 @@
+ package com.android.webview.chromium;
+ 
+ import android.os.Build;
+-import android.webkit.TracingController;
+-import android.webkit.WebViewDelegate;
++import org.chromium.android_crwebview.webkit.TracingController;
++import android.webkit.WebViewDelegateWrapper;
++import org.chromium.android_crwebview.webkit.WebViewFactory;
+ 
+ import androidx.annotation.RequiresApi;
+ 
+@@ -33,7 +34,7 @@ public final class GlueApiHelperForP {
+                         awInit.getRunQueue(), awInit.getAwTracingController()));
+     }
+ 
+-    public static String getDataDirectorySuffix(WebViewDelegate webViewDelegate) {
+-        return webViewDelegate.getDataDirectorySuffix();
++    public static String getDataDirectorySuffix(WebViewDelegateWrapper webViewDelegate) {
++        return WebViewFactory.getDataDirectorySuffix(); //webViewDelegate.getDataDirectorySuffix();
+     }
+ }
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/GlueApiHelperForQ.java b/android_webview/glue/java/src/com/android/webview/chromium/GlueApiHelperForQ.java
+index b3de3fbfe5ac9..1e9826360d9b9 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/GlueApiHelperForQ.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/GlueApiHelperForQ.java
+@@ -5,8 +5,8 @@
+ package com.android.webview.chromium;
+ 
+ import android.os.Build;
+-import android.webkit.WebViewRenderProcess;
+-import android.webkit.WebViewRenderProcessClient;
++import org.chromium.android_crwebview.webkit.WebViewRenderProcess;
++import org.chromium.android_crwebview.webkit.WebViewRenderProcessClient;
+ 
+ import androidx.annotation.RequiresApi;
+ 
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/GlueApiHelperForR.java b/android_webview/glue/java/src/com/android/webview/chromium/GlueApiHelperForR.java
+index 65ac73e527164..545f1c5b61512 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/GlueApiHelperForR.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/GlueApiHelperForR.java
+@@ -5,7 +5,7 @@
+ package com.android.webview.chromium;
+ 
+ import android.os.Build;
+-import android.webkit.PacProcessor;
++import org.chromium.android_crwebview.webkit.PacProcessor;
+ 
+ import androidx.annotation.RequiresApi;
+ 
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/PacProcessorImpl.java b/android_webview/glue/java/src/com/android/webview/chromium/PacProcessorImpl.java
+index 1acf2f38cb254..4c88b549be4c4 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/PacProcessorImpl.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/PacProcessorImpl.java
+@@ -6,7 +6,7 @@ package com.android.webview.chromium;
+ 
+ import android.net.Network;
+ import android.os.Build;
+-import android.webkit.PacProcessor;
++import org.chromium.android_crwebview.webkit.PacProcessor;
+ 
+ import androidx.annotation.RequiresApi;
+ 
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/Profile.java b/android_webview/glue/java/src/com/android/webview/chromium/Profile.java
+index d6dcb78888cfb..d8be6ed972697 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/Profile.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/Profile.java
+@@ -4,11 +4,11 @@
+ 
+ package com.android.webview.chromium;
+ 
+-import android.webkit.CookieManager;
+-import android.webkit.GeolocationPermissions;
+-import android.webkit.ServiceWorkerController;
+-import android.webkit.ValueCallback;
+-import android.webkit.WebStorage;
++import org.chromium.android_crwebview.webkit.CookieManager;
++import org.chromium.android_crwebview.webkit.GeolocationPermissions;
++import org.chromium.android_crwebview.webkit.ServiceWorkerController;
++import org.chromium.android_crwebview.webkit.ValueCallback;
++import org.chromium.android_crwebview.webkit.WebStorage;
+ 
+ import androidx.annotation.NonNull;
+ 
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/SafeBrowsingResponseAdapter.java b/android_webview/glue/java/src/com/android/webview/chromium/SafeBrowsingResponseAdapter.java
+index ecf2be7514b73..d964102975301 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/SafeBrowsingResponseAdapter.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/SafeBrowsingResponseAdapter.java
+@@ -6,7 +6,7 @@ package com.android.webview.chromium;
+ 
+ import android.annotation.SuppressLint;
+ import android.os.Build;
+-import android.webkit.SafeBrowsingResponse;
++import org.chromium.android_crwebview.webkit.SafeBrowsingResponse;
+ 
+ import androidx.annotation.RequiresApi;
+ 
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/ServiceWorkerClientAdapter.java b/android_webview/glue/java/src/com/android/webview/chromium/ServiceWorkerClientAdapter.java
+index da85f6e95ba6b..18c878a1a9b16 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/ServiceWorkerClientAdapter.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/ServiceWorkerClientAdapter.java
+@@ -4,8 +4,8 @@
+ 
+ package com.android.webview.chromium;
+ 
+-import android.webkit.ServiceWorkerClient;
+-import android.webkit.WebResourceResponse;
++import org.chromium.android_crwebview.webkit.ServiceWorkerClient;
++import org.chromium.android_crwebview.webkit.WebResourceResponse;
+ 
+ import org.chromium.android_webview.AwContentsClient.AwWebResourceRequest;
+ import org.chromium.android_webview.AwServiceWorkerClient;
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/ServiceWorkerControllerAdapter.java b/android_webview/glue/java/src/com/android/webview/chromium/ServiceWorkerControllerAdapter.java
+index fc01bd00aef52..c74546e0207a2 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/ServiceWorkerControllerAdapter.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/ServiceWorkerControllerAdapter.java
+@@ -4,9 +4,9 @@
+ 
+ package com.android.webview.chromium;
+ 
+-import android.webkit.ServiceWorkerClient;
+-import android.webkit.ServiceWorkerController;
+-import android.webkit.ServiceWorkerWebSettings;
++import org.chromium.android_crwebview.webkit.ServiceWorkerClient;
++import org.chromium.android_crwebview.webkit.ServiceWorkerController;
++import org.chromium.android_crwebview.webkit.ServiceWorkerWebSettings;
+ 
+ import androidx.annotation.Nullable;
+ 
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/ServiceWorkerSettingsAdapter.java b/android_webview/glue/java/src/com/android/webview/chromium/ServiceWorkerSettingsAdapter.java
+index fc292759e961b..e59ae835bc9c8 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/ServiceWorkerSettingsAdapter.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/ServiceWorkerSettingsAdapter.java
+@@ -11,7 +11,7 @@ import org.chromium.android_webview.AwServiceWorkerSettings;
+  * and {@link org.chromium.android_webview.AwServiceWorkerSettings}.
+  */
+ @SuppressWarnings("NoSynchronizedMethodCheck")
+-public class ServiceWorkerSettingsAdapter extends android.webkit.ServiceWorkerWebSettings {
++public class ServiceWorkerSettingsAdapter extends org.chromium.android_crwebview.webkit.ServiceWorkerWebSettings {
+     private AwServiceWorkerSettings mAwServiceWorkerSettings;
+ 
+     public ServiceWorkerSettingsAdapter(AwServiceWorkerSettings awSettings) {
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/SharedTracingControllerAdapter.java b/android_webview/glue/java/src/com/android/webview/chromium/SharedTracingControllerAdapter.java
+index c4ccdeeef7904..9e9615ac33387 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/SharedTracingControllerAdapter.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/SharedTracingControllerAdapter.java
+@@ -4,7 +4,7 @@
+ 
+ package com.android.webview.chromium;
+ 
+-import android.webkit.TracingConfig;
++import org.chromium.android_crwebview.webkit.TracingConfig;
+ 
+ import androidx.annotation.NonNull;
+ import androidx.annotation.Nullable;
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/SharedWebViewChromium.java b/android_webview/glue/java/src/com/android/webview/chromium/SharedWebViewChromium.java
+index 5f2edf405c7bc..2b993d094c1d3 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/SharedWebViewChromium.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/SharedWebViewChromium.java
+@@ -4,8 +4,8 @@
+ 
+ package com.android.webview.chromium;
+ 
+-import android.webkit.WebChromeClient;
+-import android.webkit.WebViewClient;
++import org.chromium.android_crwebview.webkit.WebChromeClient;
++import org.chromium.android_crwebview.webkit.WebViewClient;
+ 
+ import org.chromium.android_webview.AwBrowserContextStore;
+ import org.chromium.android_webview.AwContents;
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/SharedWebViewContentsClientAdapter.java b/android_webview/glue/java/src/com/android/webview/chromium/SharedWebViewContentsClientAdapter.java
+index c7f1e979c7d81..32db7c02c7a6a 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/SharedWebViewContentsClientAdapter.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/SharedWebViewContentsClientAdapter.java
+@@ -6,10 +6,10 @@ package com.android.webview.chromium;
+ 
+ import android.content.Context;
+ import android.os.Build;
+-import android.webkit.WebResourceResponse;
+-import android.webkit.WebView;
+-import android.webkit.WebViewClient;
+-import android.webkit.WebViewDelegate;
++import org.chromium.android_crwebview.webkit.WebResourceResponse;
++import org.chromium.android_crwebview.webkit.WebView;
++import org.chromium.android_crwebview.webkit.WebViewClient;
++import android.webkit.WebViewDelegateWrapper;
+ 
+ import androidx.annotation.Nullable;
+ 
+@@ -34,7 +34,7 @@ abstract class SharedWebViewContentsClientAdapter extends AwContentsClient {
+     // The WebView instance that this adapter is serving.
+     protected final WebView mWebView;
+     // The WebView delegate object that provides access to required framework APIs.
+-    protected final WebViewDelegate mWebViewDelegate;
++    protected final WebViewDelegateWrapper mWebViewDelegate;
+     // The Context to use. This is different from mWebView.getContext(), which should not be used.
+     protected final Context mContext;
+     // A reference to the current WebViewClient associated with this WebView.
+@@ -50,7 +50,7 @@ abstract class SharedWebViewContentsClientAdapter extends AwContentsClient {
+      * @param webView the {@link WebView} instance that this adapter is serving.
+      */
+     SharedWebViewContentsClientAdapter(
+-            WebView webView, WebViewDelegate webViewDelegate, Context context) {
++            WebView webView, WebViewDelegateWrapper webViewDelegate, Context context) {
+         if (webView == null) {
+             throw new IllegalArgumentException("webView can't be null.");
+         }
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/SharedWebViewRendererClientAdapter.java b/android_webview/glue/java/src/com/android/webview/chromium/SharedWebViewRendererClientAdapter.java
+index 93bbb0cd14fae..37f23da86adc9 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/SharedWebViewRendererClientAdapter.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/SharedWebViewRendererClientAdapter.java
+@@ -4,7 +4,7 @@
+ 
+ package com.android.webview.chromium;
+ 
+-import android.webkit.WebView;
++import org.chromium.android_crwebview.webkit.WebView;
+ 
+ import org.chromium.android_webview.AwRenderProcess;
+ 
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/TracingControllerAdapter.java b/android_webview/glue/java/src/com/android/webview/chromium/TracingControllerAdapter.java
+index b273829d43d59..8baef6d7dd5c6 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/TracingControllerAdapter.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/TracingControllerAdapter.java
+@@ -5,8 +5,8 @@
+ package com.android.webview.chromium;
+ 
+ import android.os.Build;
+-import android.webkit.TracingConfig;
+-import android.webkit.TracingController;
++import org.chromium.android_crwebview.webkit.TracingConfig;
++import org.chromium.android_crwebview.webkit.TracingController;
+ 
+ import androidx.annotation.NonNull;
+ import androidx.annotation.Nullable;
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/WebBackForwardListChromium.java b/android_webview/glue/java/src/com/android/webview/chromium/WebBackForwardListChromium.java
+index 130033b966112..2e45a4c2f320f 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/WebBackForwardListChromium.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/WebBackForwardListChromium.java
+@@ -4,8 +4,8 @@
+ 
+ package com.android.webview.chromium;
+ 
+-import android.webkit.WebBackForwardList;
+-import android.webkit.WebHistoryItem;
++import org.chromium.android_crwebview.webkit.WebBackForwardList;
++import org.chromium.android_crwebview.webkit.WebHistoryItem;
+ 
+ import org.chromium.content_public.browser.NavigationHistory;
+ 
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/WebHistoryItemChromium.java b/android_webview/glue/java/src/com/android/webview/chromium/WebHistoryItemChromium.java
+index 00f703e638972..f6434a375bc31 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/WebHistoryItemChromium.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/WebHistoryItemChromium.java
+@@ -5,7 +5,7 @@
+ package com.android.webview.chromium;
+ 
+ import android.graphics.Bitmap;
+-import android.webkit.WebHistoryItem;
++import org.chromium.android_crwebview.webkit.WebHistoryItem;
+ 
+ import org.chromium.content_public.browser.NavigationEntry;
+ import org.chromium.url.GURL;
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/WebIconDatabaseAdapter.java b/android_webview/glue/java/src/com/android/webview/chromium/WebIconDatabaseAdapter.java
+index e1f2254688395..7d585a23aa0c0 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/WebIconDatabaseAdapter.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/WebIconDatabaseAdapter.java
+@@ -12,7 +12,7 @@ import org.chromium.android_webview.AwContents;
+ 
+ /** Chromium implementation of WebIconDatabase -- big old no-op (base class is deprecated). */
+ @SuppressWarnings("deprecation")
+-final class WebIconDatabaseAdapter extends android.webkit.WebIconDatabase {
++final class WebIconDatabaseAdapter extends org.chromium.android_crwebview.webkit.WebIconDatabase {
+     @Override
+     public void open(String path) {
+         WebViewChromium.recordWebViewApiCall(ApiCall.WEB_ICON_DATABASE_OPEN);
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/WebMessagePortAdapter.java b/android_webview/glue/java/src/com/android/webview/chromium/WebMessagePortAdapter.java
+index b3c2cd2ff08fe..ff5dc948f6e7d 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/WebMessagePortAdapter.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/WebMessagePortAdapter.java
+@@ -5,8 +5,8 @@
+ package com.android.webview.chromium;
+ 
+ import android.os.Handler;
+-import android.webkit.WebMessage;
+-import android.webkit.WebMessagePort;
++import org.chromium.android_crwebview.webkit.WebMessage;
++import org.chromium.android_crwebview.webkit.WebMessagePort;
+ 
+ import org.chromium.content_public.browser.MessagePayload;
+ import org.chromium.content_public.browser.MessagePort;
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/WebResourceErrorAdapter.java b/android_webview/glue/java/src/com/android/webview/chromium/WebResourceErrorAdapter.java
+index f7ce445946910..7ad3b6750d491 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/WebResourceErrorAdapter.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/WebResourceErrorAdapter.java
+@@ -4,7 +4,7 @@
+ 
+ package com.android.webview.chromium;
+ 
+-import android.webkit.WebResourceError;
++import org.chromium.android_crwebview.webkit.WebResourceError;
+ 
+ import org.chromium.android_webview.AwContentsClient.AwWebResourceError;
+ 
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/WebResourceRequestAdapter.java b/android_webview/glue/java/src/com/android/webview/chromium/WebResourceRequestAdapter.java
+index 61722aadd0d47..782c273262599 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/WebResourceRequestAdapter.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/WebResourceRequestAdapter.java
+@@ -5,7 +5,7 @@
+ package com.android.webview.chromium;
+ 
+ import android.net.Uri;
+-import android.webkit.WebResourceRequest;
++import org.chromium.android_crwebview.webkit.WebResourceRequest;
+ 
+ import org.chromium.android_webview.AwContentsClient.AwWebResourceRequest;
+ 
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/WebStorageAdapter.java b/android_webview/glue/java/src/com/android/webview/chromium/WebStorageAdapter.java
+index 1001c0b967a9d..4ebcb9470365e 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/WebStorageAdapter.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/WebStorageAdapter.java
+@@ -4,8 +4,8 @@
+ 
+ package com.android.webview.chromium;
+ 
+-import android.webkit.ValueCallback;
+-import android.webkit.WebStorage;
++import org.chromium.android_crwebview.webkit.ValueCallback;
++import org.chromium.android_crwebview.webkit.WebStorage;
+ 
+ import com.android.webview.chromium.WebViewChromium.ApiCall;
+ 
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromium.java b/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromium.java
+index a03aa4cb833d3..2dcfd0a92725e 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromium.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromium.java
+@@ -38,21 +38,22 @@ import android.view.autofill.AutofillValue;
+ import android.view.inputmethod.EditorInfo;
+ import android.view.inputmethod.InputConnection;
+ import android.view.textclassifier.TextClassifier;
+-import android.webkit.DownloadListener;
+-import android.webkit.FindActionModeCallback;
+-import android.webkit.ValueCallback;
+-import android.webkit.WebBackForwardList;
+-import android.webkit.WebChromeClient;
+-import android.webkit.WebChromeClient.CustomViewCallback;
+-import android.webkit.WebMessage;
+-import android.webkit.WebMessagePort;
+-import android.webkit.WebSettings;
+-import android.webkit.WebView;
+-import android.webkit.WebView.VisualStateCallback;
+-import android.webkit.WebViewClient;
+-import android.webkit.WebViewProvider;
+-import android.webkit.WebViewRenderProcess;
+-import android.webkit.WebViewRenderProcessClient;
++import org.chromium.android_crwebview.webkit.DownloadListener;
++import org.chromium.android_crwebview.webkit.FindActionModeCallback;
++import org.chromium.android_crwebview.webkit.ValueCallback;
++import org.chromium.android_crwebview.webkit.WebBackForwardList;
++import org.chromium.android_crwebview.webkit.WebChromeClient;
++import org.chromium.android_crwebview.webkit.WebChromeClient.CustomViewCallback;
++import org.chromium.android_crwebview.webkit.WebMessage;
++import org.chromium.android_crwebview.webkit.WebMessagePort;
++import org.chromium.android_crwebview.webkit.WebSettings;
++import org.chromium.android_crwebview.webkit.WebView;
++import org.chromium.android_crwebview.webkit.WebView.VisualStateCallback;
++import org.chromium.android_crwebview.webkit.WebViewClient;
++import org.chromium.android_crwebview.webkit.WebViewProvider;
++import org.chromium.android_crwebview.webkit.WebViewRenderProcess;
++import org.chromium.android_crwebview.webkit.WebViewRenderProcessClient;
++
+ import android.widget.TextView;
+ 
+ import androidx.annotation.IntDef;
+@@ -790,6 +791,13 @@ class WebViewChromium
+                 mWebSettings.getAwSettings().setScrollTopLeftInteropEnabled(true);
+             }
+ 
++            mWebSettings.getAwSettings().setBuiltInZoomControls(true);
++            mWebSettings.getAwSettings().setDisplayZoomControls(false);
++            mWebSettings.getAwSettings().setUseWideViewPort(true);
++            mWebSettings.getAwSettings().setLoadWithOverviewMode(true);
++            mWebSettings.getAwSettings().setLayoutAlgorithm(AwSettings.LAYOUT_ALGORITHM_TEXT_AUTOSIZING);
++            mWebSettings.getAwSettings().setJavaScriptEnabled(true);
++
+             if (mShouldDisableThreadChecking) disableThreadChecking();
+ 
+             mSharedWebViewChromium.init(mContentsClientAdapter);
+@@ -2213,7 +2221,7 @@ class WebViewChromium
+             mSharedWebViewChromium.setWebViewClient(client);
+             mContentsClientAdapter.setWebViewClient(mSharedWebViewChromium.getWebViewClient());
+             if (client != null) {
+-                ApiImplementationLogger.logWebViewClientImplementation(client);
++                //ApiImplementationLogger.logWebViewClientImplementation(client);
+             }
+         }
+     }
+@@ -2291,7 +2299,7 @@ class WebViewChromium
+             mSharedWebViewChromium.setWebChromeClient(client);
+             mContentsClientAdapter.setWebChromeClient(mSharedWebViewChromium.getWebChromeClient());
+             if (client != null) {
+-                ApiImplementationLogger.logWebChromeClientImplementation(client);
++                //ApiImplementationLogger.logWebChromeClientImplementation(client);
+             }
+         }
+     }
+@@ -2370,6 +2378,7 @@ class WebViewChromium
+ 
+     @Override
+     public void addJavascriptInterface(final Object obj, final String interfaceName) {
++        Log.i("crWebView", "addJavascriptInterface " + obj + " interfaceName " + interfaceName);
+         if (checkNeedsPost()) {
+             mFactory.addTask(
+                     new Runnable() {
+@@ -2385,6 +2394,7 @@ class WebViewChromium
+             recordWebViewApiCall(ApiCall.ADD_JAVASCRIPT_INTERFACE);
+             mAwContents.addJavascriptInterface(obj, interfaceName);
+         }
++        Log.i("crWebView", "addJavascriptInterface " + obj + " interfaceName " + interfaceName + " Okay");
+     }
+ 
+     @Override
+@@ -3554,6 +3564,16 @@ class WebViewChromium
+         }
+     }
+ 
++    private class MyDrawFnAccess implements AwDrawFnImpl.DrawFnAccess {
++        @Override
++        public void drawWebViewFunctor(Canvas canvas, int functor) {
++            Log.i("crWebView", " ** drawWebViewFunctor STEP 001 canvas = " + canvas + " functor " + functor + " mHardwareView " + this);
++            //mHardwareView.drawWebViewFunctor(functor);
++            mWebView.drawWebViewFunctor(canvas, functor);
++            Log.i("crWebView", " ** drawWebViewFunctor STEP 002 canvas = " + canvas + " functor " + functor + " mHardwareView " + this);
++        }
++    }
++
+     // AwContents.NativeDrawFunctorFactory implementation ----------------------------------
+     private class WebViewNativeDrawFunctorFactory implements AwContents.NativeDrawFunctorFactory {
+         @Override
+@@ -3563,10 +3583,12 @@ class WebViewChromium
+ 
+         @Override
+         public AwDrawFnImpl.DrawFnAccess getDrawFnAccess() {
+-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+-                return mFactory.getWebViewDelegate()::drawWebViewFunctor;
+-            }
+-            return null;
++            //if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
++            //    return mFactory.getWebViewDelegate()::drawWebViewFunctor;
++            //}
++            //return null;
++            //return mWebView.getDrawFnAccess();
++            return new MyDrawFnAccess();
+         }
+     }
+ 
+@@ -3574,8 +3596,7 @@ class WebViewChromium
+     private class InternalAccessAdapter implements AwContents.InternalAccessDelegate {
+         @Override
+         public boolean super_onKeyUp(int arg0, KeyEvent arg1) {
+-            // Intentional no-op
+-            return false;
++            return mWebViewPrivate.super_onKeyUp(arg0, arg1);
+         }
+ 
+         @Override
+@@ -3590,7 +3611,7 @@ class WebViewChromium
+ 
+         @Override
+         public void super_onConfigurationChanged(Configuration arg0) {
+-            // Intentional no-op
++           mWebViewPrivate.super_onConfigurationChanged(arg0);
+         }
+ 
+         @Override
+@@ -3608,6 +3629,7 @@ class WebViewChromium
+             // Intentional no-op.
+             // Chromium calls this directly to trigger accessibility events. That isn't needed
+             // for WebView since super_scrollTo invokes onScrollChanged for us.
++            mWebViewPrivate.onScrollChanged(l, t, oldl, oldt);
+         }
+ 
+         @Override
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumAwInit.java b/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumAwInit.java
+index d29791a711736..20f34b220a752 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumAwInit.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumAwInit.java
+@@ -14,11 +14,12 @@ import android.os.Looper;
+ import android.os.Process;
+ import android.os.SystemClock;
+ import android.util.Log;
+-import android.webkit.CookieManager;
+-import android.webkit.GeolocationPermissions;
+-import android.webkit.WebSettings;
+-import android.webkit.WebStorage;
+-import android.webkit.WebViewDatabase;
++import org.chromium.android_crwebview.webkit.CookieManager;
++import org.chromium.android_crwebview.webkit.GeolocationPermissions;
++import org.chromium.android_crwebview.webkit.WebSettings;
++import org.chromium.android_crwebview.webkit.WebStorage;
++import org.chromium.android_crwebview.webkit.WebViewDatabase;
++import org.chromium.android_crwebview.webkit.WebIconDatabase;
+ 
+ import androidx.annotation.IntDef;
+ 
+@@ -370,7 +371,8 @@ public class WebViewChromiumAwInit {
+     private void setUpResources(int packageId, Context context) {
+         try (ScopedSysTraceEvent e =
+                 ScopedSysTraceEvent.scoped("WebViewChromiumAwInit.setUpResources")) {
+-            R.onResourcesLoaded(packageId);
++            Log.i("crWebView", "setUpResources packageId = " + packageId);
++            //R.onResourcesLoaded(packageId);
+ 
+             AwResource.setResources(context.getResources());
+             AwResource.setConfigKeySystemUuidMapping(android.R.array.config_keySystemUuidMapping);
+@@ -462,18 +464,22 @@ public class WebViewChromiumAwInit {
+         ThreadUtils.setUiThread(looper);
+     }
+ 
++//WURUXU MARK
+     private void initPlatSupportLibrary() {
+-        try (ScopedSysTraceEvent e =
+-                ScopedSysTraceEvent.scoped("WebViewChromiumAwInit.initPlatSupportLibrary")) {
+-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+-                AwDrawFnImpl.setDrawFnFunctionTable(DrawFunctor.getDrawFnFunctionTable());
+-            }
+-            DrawGLFunctor.setChromiumAwDrawGLFunction(AwContents.getAwDrawGLFunction());
+-            AwContents.setAwDrawSWFunctionTable(GraphicsUtils.getDrawSWFunctionTable());
+-            AwContents.setAwDrawGLFunctionTable(GraphicsUtils.getDrawGLFunctionTable());
+-        }
++        //try (ScopedSysTraceEvent e =
++        //        ScopedSysTraceEvent.scoped("WebViewChromiumAwInit.initPlatSupportLibrary")) {
++        //    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
++        //        AwDrawFnImpl.setDrawFnFunctionTable(DrawFunctor.getDrawFnFunctionTable());
++        //    }
++        //    DrawGLFunctor.setChromiumAwDrawGLFunction(AwContents.getAwDrawGLFunction());
++        //    AwContents.setAwDrawSWFunctionTable(GraphicsUtils.getDrawSWFunctionTable());
++        //    AwContents.setAwDrawGLFunctionTable(GraphicsUtils.getDrawGLFunctionTable());
++        //}
++        AwDrawFnImpl.setDrawFnFunctionTable(MyDrawFunctor.getDrawFnFunctionTable());
+     }
+ 
++
++
+     private void doNetworkInitializations(Context applicationContext) {
+         try (ScopedSysTraceEvent e =
+                 ScopedSysTraceEvent.scoped("WebViewChromiumAwInit.doNetworkInitializations")) {
+@@ -563,7 +569,7 @@ public class WebViewChromiumAwInit {
+         return mDefaultServiceWorkerController;
+     }
+ 
+-    public android.webkit.WebIconDatabase getWebIconDatabase() {
++    public WebIconDatabase getWebIconDatabase() {
+         synchronized (mLock) {
+             ensureChromiumStartedLocked(true, CallSite.GET_WEB_ICON_DATABASE);
+             WebViewChromium.recordWebViewApiCall(ApiCall.WEB_ICON_DATABASE_GET_INSTANCE);
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumFactoryProvider.java b/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumFactoryProvider.java
+index a96d6c75b7130..208e717dcf77a 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumFactoryProvider.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumFactoryProvider.java
+@@ -14,20 +14,22 @@ import android.net.Uri;
+ import android.os.Build;
+ import android.os.SystemClock;
+ import android.os.UserManager;
+-import android.webkit.CookieManager;
+-import android.webkit.GeolocationPermissions;
+-import android.webkit.PacProcessor;
+-import android.webkit.ServiceWorkerController;
+-import android.webkit.TokenBindingService;
+-import android.webkit.TracingController;
+-import android.webkit.ValueCallback;
+-import android.webkit.WebStorage;
+-import android.webkit.WebView;
+-import android.webkit.WebViewDatabase;
+-import android.webkit.WebViewDelegate;
+-import android.webkit.WebViewFactory;
+-import android.webkit.WebViewFactoryProvider;
+-import android.webkit.WebViewProvider;
++import org.chromium.android_crwebview.webkit.CookieManager;
++import org.chromium.android_crwebview.webkit.GeolocationPermissions;
++import org.chromium.android_crwebview.webkit.PacProcessor;
++import org.chromium.android_crwebview.webkit.ServiceWorkerController;
++import org.chromium.android_crwebview.webkit.TokenBindingService;
++import org.chromium.android_crwebview.webkit.TracingController;
++import org.chromium.android_crwebview.webkit.ValueCallback;
++import org.chromium.android_crwebview.webkit.WebStorage;
++import org.chromium.android_crwebview.webkit.WebView;
++import org.chromium.android_crwebview.webkit.WebViewDatabase;
++import android.webkit.WebViewDelegateWrapper;
++import org.chromium.android_crwebview.webkit.WebViewFactory;
++import org.chromium.android_crwebview.webkit.WebViewFactoryProvider;
++import org.chromium.android_crwebview.webkit.WebViewProvider;
++import org.chromium.android_crwebview.webkit.WebIconDatabase;
++//import android.webkit.WebViewDelegate;
+ 
+ import androidx.annotation.RequiresApi;
+ 
+@@ -170,7 +172,8 @@ public class WebViewChromiumFactoryProvider implements WebViewFactoryProvider {
+     /* package */ WebViewChromiumAwInit mAwInit;
+ 
+     private SharedPreferences mWebViewPrefs;
+-    private WebViewDelegate mWebViewDelegate;
++    private WebViewDelegateWrapper mWebViewDelegate;
++    //private android.webkit.WebViewDelegate mRealWebViewDelegate;
+ 
+     protected boolean mShouldDisableThreadChecking;
+ 
+@@ -223,7 +226,7 @@ public class WebViewChromiumFactoryProvider implements WebViewFactoryProvider {
+     }
+ 
+     /** Entry point for Android 26 (Oreo) and above. See class docs for initialization details. */
+-    public static WebViewChromiumFactoryProvider create(WebViewDelegate delegate) {
++    public static WebViewChromiumFactoryProvider create(WebViewDelegateWrapper delegate) {
+         return new WebViewChromiumFactoryProvider(delegate);
+     }
+ 
+@@ -232,7 +235,7 @@ public class WebViewChromiumFactoryProvider implements WebViewFactoryProvider {
+      * by {@link #create}, this constructor was invoked directly before {@link #create} was defined.
+      * See class docs for initialization details.
+      */
+-    public WebViewChromiumFactoryProvider(WebViewDelegate delegate) {
++    public WebViewChromiumFactoryProvider(WebViewDelegateWrapper delegate) {
+         initialize(delegate);
+     }
+ 
+@@ -294,26 +297,29 @@ public class WebViewChromiumFactoryProvider implements WebViewFactoryProvider {
+     }
+ 
+     @SuppressWarnings({"NoContextGetApplicationContext", "DiscouragedApi"})
+-    private void initialize(WebViewDelegate webViewDelegate) {
++    private void initialize(WebViewDelegateWrapper webViewDelegate) {
++        Application application = webViewDelegate.getApplication();
++        Context ctx = application.getApplicationContext();
++
+         mInitInfo.mStartTime = SystemClock.uptimeMillis();
++		Log.i("crWebView", "WebViewDelegate initialize STEP 001");
+         try (ScopedSysTraceEvent e1 =
+                 ScopedSysTraceEvent.scoped("WebViewChromiumFactoryProvider.initialize")) {
+-            PackageInfo packageInfo;
+-            try (ScopedSysTraceEvent e2 =
+-                    ScopedSysTraceEvent.scoped(
+-                            "WebViewChromiumFactoryProvider.getLoadedPackageInfo")) {
+-                // The package is used to locate the services for copying crash minidumps and
+-                // requesting variations seeds. So it must be set before initializing variations and
+-                // before a renderer has a chance to crash.
+-                packageInfo = WebViewFactory.getLoadedPackageInfo();
++            PackageInfo packageInfo = null;
++            try {
++			    PackageManager pm = application.getPackageManager();
++                packageInfo = pm.getPackageInfo(ctx.getPackageName(), PackageManager.GET_SHARED_LIBRARY_FILES | PackageManager.MATCH_UNINSTALLED_PACKAGES | PackageManager.GET_SIGNATURES | PackageManager.GET_META_DATA);
++            } catch(PackageManager.NameNotFoundException e) {
+             }
++
++			Log.i("crWebView", "getProviderClass " + ctx.getPackageName() + "  sPackageInfo " + packageInfo);
+             AwBrowserProcess.setWebViewPackageName(packageInfo.packageName);
+             AwBrowserProcess.initializeApkType(packageInfo.applicationInfo);
+ 
+             mAwInit = createAwInit();
+             mWebViewDelegate = webViewDelegate;
+-            Application application = webViewDelegate.getApplication();
+-            Context ctx = application.getApplicationContext();
++            //mRealWebViewDelegate = android.webkit.WebViewDelegate();
++
+ 
+             // If the application context is DE, but we have credentials, use a CE context instead
+             try (ScopedSysTraceEvent e2 =
+@@ -535,15 +541,15 @@ public class WebViewChromiumFactoryProvider implements WebViewFactoryProvider {
+         RecordHistogram.recordTimesHistogram(
+                 "Android.WebView.Startup.CreationTime.Stage1.FactoryInit", mInitInfo.mDuration);
+ 
+-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+-            mInitInfo.mTotalFactoryInitStartTime =
+-                    mWebViewDelegate.getStartupTimestamps().getWebViewLoadStart();
+-            mInitInfo.mTotalFactoryInitDuration =
+-                    SystemClock.uptimeMillis() - mInitInfo.mTotalFactoryInitStartTime;
+-            RecordHistogram.recordTimesHistogram(
+-                    "Android.WebView.Startup.CreationTime.TotalFactoryInitTime",
+-                    mInitInfo.mTotalFactoryInitDuration);
+-        }
++        //if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
++        //    mInitInfo.mTotalFactoryInitStartTime =
++        //            mWebViewDelegate.getStartupTimestamps().getWebViewLoadStart();
++        //    mInitInfo.mTotalFactoryInitDuration =
++        //            SystemClock.uptimeMillis() - mInitInfo.mTotalFactoryInitStartTime;
++        //    RecordHistogram.recordTimesHistogram(
++        //            "Android.WebView.Startup.CreationTime.TotalFactoryInitTime",
++        //            mInitInfo.mTotalFactoryInitDuration);
++        //}
+     }
+ 
+     /* package */ static void checkStorageIsNotDeviceProtected(Context context) {
+@@ -785,7 +791,7 @@ public class WebViewChromiumFactoryProvider implements WebViewFactoryProvider {
+     }
+ 
+     @Override
+-    public android.webkit.WebIconDatabase getWebIconDatabase() {
++    public WebIconDatabase getWebIconDatabase() {
+         return mAwInit.getWebIconDatabase();
+     }
+ 
+@@ -799,10 +805,14 @@ public class WebViewChromiumFactoryProvider implements WebViewFactoryProvider {
+         return mAwInit.getDefaultWebViewDatabase(context);
+     }
+ 
+-    WebViewDelegate getWebViewDelegate() {
++    WebViewDelegateWrapper getWebViewDelegate() {
+         return mWebViewDelegate;
+     }
+ 
++    //android.webkit.WebViewDelegate getRealWebViewDelegate() {
++    //    return mRealWebViewDelegate;
++    //}
++
+     WebViewContentsClientAdapter createWebViewContentsClientAdapter(
+             WebView webView, Context context) {
+         try (ScopedSysTraceEvent e =
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumFactoryProviderForO.java b/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumFactoryProviderForO.java
+index 23b2dac2723e9..e5d08d8bf265b 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumFactoryProviderForO.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumFactoryProviderForO.java
+@@ -5,11 +5,11 @@
+ package com.android.webview.chromium;
+ 
+ class WebViewChromiumFactoryProviderForO extends WebViewChromiumFactoryProvider {
+-    public static WebViewChromiumFactoryProvider create(android.webkit.WebViewDelegate delegate) {
++    public static WebViewChromiumFactoryProvider create(android.webkit.WebViewDelegateWrapper delegate) {
+         return new WebViewChromiumFactoryProviderForO(delegate);
+     }
+ 
+-    protected WebViewChromiumFactoryProviderForO(android.webkit.WebViewDelegate delegate) {
++    protected WebViewChromiumFactoryProviderForO(android.webkit.WebViewDelegateWrapper delegate) {
+         super(delegate);
+     }
+ }
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumFactoryProviderForOMR1.java b/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumFactoryProviderForOMR1.java
+index 7a57894feab3a..779e3af4d6e5e 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumFactoryProviderForOMR1.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumFactoryProviderForOMR1.java
+@@ -5,11 +5,11 @@
+ package com.android.webview.chromium;
+ 
+ class WebViewChromiumFactoryProviderForOMR1 extends WebViewChromiumFactoryProvider {
+-    public static WebViewChromiumFactoryProvider create(android.webkit.WebViewDelegate delegate) {
++    public static WebViewChromiumFactoryProvider create(android.webkit.WebViewDelegateWrapper delegate) {
+         return new WebViewChromiumFactoryProviderForOMR1(delegate);
+     }
+ 
+-    protected WebViewChromiumFactoryProviderForOMR1(android.webkit.WebViewDelegate delegate) {
++    protected WebViewChromiumFactoryProviderForOMR1(android.webkit.WebViewDelegateWrapper delegate) {
+         super(delegate);
+     }
+ }
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumFactoryProviderForP.java b/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumFactoryProviderForP.java
+index b81432873fe50..60c52de1906f0 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumFactoryProviderForP.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumFactoryProviderForP.java
+@@ -5,11 +5,11 @@
+ package com.android.webview.chromium;
+ 
+ public class WebViewChromiumFactoryProviderForP extends WebViewChromiumFactoryProvider {
+-    public static WebViewChromiumFactoryProvider create(android.webkit.WebViewDelegate delegate) {
++    public static WebViewChromiumFactoryProvider create(android.webkit.WebViewDelegateWrapper delegate) {
+         return new WebViewChromiumFactoryProviderForP(delegate);
+     }
+ 
+-    protected WebViewChromiumFactoryProviderForP(android.webkit.WebViewDelegate delegate) {
++    protected WebViewChromiumFactoryProviderForP(android.webkit.WebViewDelegateWrapper delegate) {
+         super(delegate);
+     }
+ }
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumFactoryProviderForQ.java b/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumFactoryProviderForQ.java
+index 5f9f3b17427db..191a946490b17 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumFactoryProviderForQ.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumFactoryProviderForQ.java
+@@ -5,11 +5,11 @@
+ package com.android.webview.chromium;
+ 
+ public class WebViewChromiumFactoryProviderForQ extends WebViewChromiumFactoryProvider {
+-    public static WebViewChromiumFactoryProvider create(android.webkit.WebViewDelegate delegate) {
++    public static WebViewChromiumFactoryProvider create(android.webkit.WebViewDelegateWrapper delegate) {
+         return new WebViewChromiumFactoryProviderForQ(delegate);
+     }
+ 
+-    protected WebViewChromiumFactoryProviderForQ(android.webkit.WebViewDelegate delegate) {
++    protected WebViewChromiumFactoryProviderForQ(android.webkit.WebViewDelegateWrapper delegate) {
+         super(delegate);
+     }
+ }
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumFactoryProviderForR.java b/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumFactoryProviderForR.java
+index 621a1e69ebe66..147c22b9dc9d2 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumFactoryProviderForR.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumFactoryProviderForR.java
+@@ -5,11 +5,11 @@
+ package com.android.webview.chromium;
+ 
+ class WebViewChromiumFactoryProviderForR extends WebViewChromiumFactoryProvider {
+-    public static WebViewChromiumFactoryProvider create(android.webkit.WebViewDelegate delegate) {
++    public static WebViewChromiumFactoryProvider create(android.webkit.WebViewDelegateWrapper delegate) {
+         return new WebViewChromiumFactoryProviderForR(delegate);
+     }
+ 
+-    protected WebViewChromiumFactoryProviderForR(android.webkit.WebViewDelegate delegate) {
++    protected WebViewChromiumFactoryProviderForR(android.webkit.WebViewDelegateWrapper delegate) {
+         super(delegate);
+     }
+ }
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumFactoryProviderForS.java b/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumFactoryProviderForS.java
+index 014dadc643fce..af694eec95b74 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumFactoryProviderForS.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumFactoryProviderForS.java
+@@ -5,11 +5,11 @@
+ package com.android.webview.chromium;
+ 
+ class WebViewChromiumFactoryProviderForS extends WebViewChromiumFactoryProvider {
+-    public static WebViewChromiumFactoryProvider create(android.webkit.WebViewDelegate delegate) {
++    public static WebViewChromiumFactoryProvider create(android.webkit.WebViewDelegateWrapper delegate) {
+         return new WebViewChromiumFactoryProviderForS(delegate);
+     }
+ 
+-    protected WebViewChromiumFactoryProviderForS(android.webkit.WebViewDelegate delegate) {
++    protected WebViewChromiumFactoryProviderForS(android.webkit.WebViewDelegateWrapper delegate) {
+         super(delegate);
+     }
+ }
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumFactoryProviderForT.java b/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumFactoryProviderForT.java
+index f4bf08ec6dee0..e145fe4813c69 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumFactoryProviderForT.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/WebViewChromiumFactoryProviderForT.java
+@@ -8,11 +8,11 @@ import org.chromium.android_webview.common.Lifetime;
+ 
+ @Lifetime.Singleton
+ class WebViewChromiumFactoryProviderForT extends WebViewChromiumFactoryProvider {
+-    public static WebViewChromiumFactoryProvider create(android.webkit.WebViewDelegate delegate) {
++    public static WebViewChromiumFactoryProvider create(android.webkit.WebViewDelegateWrapper delegate) {
+         return new WebViewChromiumFactoryProviderForT(delegate);
+     }
+ 
+-    protected WebViewChromiumFactoryProviderForT(android.webkit.WebViewDelegate delegate) {
++    protected WebViewChromiumFactoryProviderForT(android.webkit.WebViewDelegateWrapper delegate) {
+         super(delegate);
+     }
+ }
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/WebViewContentsClientAdapter.java b/android_webview/glue/java/src/com/android/webview/chromium/WebViewContentsClientAdapter.java
+index ca112dd360d3d..87df5511f4c51 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/WebViewContentsClientAdapter.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/WebViewContentsClientAdapter.java
+@@ -19,22 +19,22 @@ import android.os.Message;
+ import android.view.KeyEvent;
+ import android.view.View;
+ import android.view.WindowManager;
+-import android.webkit.ClientCertRequest;
+-import android.webkit.ConsoleMessage;
+-import android.webkit.DownloadListener;
+-import android.webkit.GeolocationPermissions;
+-import android.webkit.JsDialogHelper;
+-import android.webkit.JsPromptResult;
+-import android.webkit.JsResult;
+-import android.webkit.PermissionRequest;
+-import android.webkit.RenderProcessGoneDetail;
+-import android.webkit.SslErrorHandler;
+-import android.webkit.ValueCallback;
+-import android.webkit.WebChromeClient;
+-import android.webkit.WebResourceResponse;
+-import android.webkit.WebView;
+-import android.webkit.WebViewClient;
+-import android.webkit.WebViewDelegate;
++import org.chromium.android_crwebview.webkit.ClientCertRequest;
++import org.chromium.android_crwebview.webkit.ConsoleMessage;
++import org.chromium.android_crwebview.webkit.DownloadListener;
++import org.chromium.android_crwebview.webkit.GeolocationPermissions;
++import org.chromium.android_crwebview.webkit.JsDialogHelper;
++import org.chromium.android_crwebview.webkit.JsPromptResult;
++import org.chromium.android_crwebview.webkit.JsResult;
++import org.chromium.android_crwebview.webkit.PermissionRequest;
++import org.chromium.android_crwebview.webkit.RenderProcessGoneDetail;
++import org.chromium.android_crwebview.webkit.SslErrorHandler;
++import org.chromium.android_crwebview.webkit.ValueCallback;
++import org.chromium.android_crwebview.webkit.WebChromeClient;
++import org.chromium.android_crwebview.webkit.WebResourceResponse;
++import org.chromium.android_crwebview.webkit.WebView;
++import org.chromium.android_crwebview.webkit.WebViewClient;
++import android.webkit.WebViewDelegateWrapper;
+ 
+ import org.chromium.android_webview.AwConsoleMessage;
+ import org.chromium.android_webview.AwContentsClient;
+@@ -118,7 +118,7 @@ class WebViewContentsClientAdapter extends SharedWebViewContentsClientAdapter {
+      */
+     @SuppressWarnings("HandlerLeak")
+     WebViewContentsClientAdapter(
+-            WebView webView, Context context, WebViewDelegate webViewDelegate) {
++            WebView webView, Context context, WebViewDelegateWrapper webViewDelegate) {
+         super(webView, webViewDelegate, context);
+         try (ScopedSysTraceEvent event =
+                 ScopedSysTraceEvent.scoped("WebView.APICallback.WebViewClient.constructor")) {
+@@ -1089,7 +1089,7 @@ class WebViewContentsClientAdapter extends SharedWebViewContentsClientAdapter {
+         }
+     }
+ 
+-    private static class AwHttpAuthHandlerAdapter extends android.webkit.HttpAuthHandler {
++    private static class AwHttpAuthHandlerAdapter extends org.chromium.android_crwebview.webkit.HttpAuthHandler {
+         private AwHttpAuthHandler mAwHandler;
+ 
+         public AwHttpAuthHandlerAdapter(AwHttpAuthHandler awHandler) {
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/WebViewDatabaseAdapter.java b/android_webview/glue/java/src/com/android/webview/chromium/WebViewDatabaseAdapter.java
+index 5787e18535581..b4a24f069f10e 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/WebViewDatabaseAdapter.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/WebViewDatabaseAdapter.java
+@@ -4,7 +4,7 @@
+ 
+ package com.android.webview.chromium;
+ 
+-import android.webkit.WebViewDatabase;
++import org.chromium.android_crwebview.webkit.WebViewDatabase;
+ 
+ import com.android.webview.chromium.WebViewChromium.ApiCall;
+ 
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/WebViewLibraryPreloader.java b/android_webview/glue/java/src/com/android/webview/chromium/WebViewLibraryPreloader.java
+index a56ea4f3f5420..49c66001eec03 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/WebViewLibraryPreloader.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/WebViewLibraryPreloader.java
+@@ -4,7 +4,7 @@
+ 
+ package com.android.webview.chromium;
+ 
+-import android.webkit.WebViewFactory;
++import org.chromium.android_crwebview.webkit.WebViewFactory;
+ 
+ import org.chromium.android_webview.common.Lifetime;
+ import org.chromium.base.library_loader.NativeLibraryPreloader;
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/WebViewRenderProcessAdapter.java b/android_webview/glue/java/src/com/android/webview/chromium/WebViewRenderProcessAdapter.java
+index e26d81467461c..4942176f2dc1e 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/WebViewRenderProcessAdapter.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/WebViewRenderProcessAdapter.java
+@@ -6,7 +6,7 @@ package com.android.webview.chromium;
+ 
+ import android.annotation.SuppressLint;
+ import android.os.Build;
+-import android.webkit.WebViewRenderProcess;
++import org.chromium.android_crwebview.webkit.WebViewRenderProcess;
+ 
+ import androidx.annotation.RequiresApi;
+ 
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/WebViewRenderProcessClientAdapter.java b/android_webview/glue/java/src/com/android/webview/chromium/WebViewRenderProcessClientAdapter.java
+index 15f71f0f0da5e..73c83f8ae11b0 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/WebViewRenderProcessClientAdapter.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/WebViewRenderProcessClientAdapter.java
+@@ -5,9 +5,9 @@
+ package com.android.webview.chromium;
+ 
+ import android.os.Build;
+-import android.webkit.WebView;
+-import android.webkit.WebViewRenderProcess;
+-import android.webkit.WebViewRenderProcessClient;
++import org.chromium.android_crwebview.webkit.WebView;
++import org.chromium.android_crwebview.webkit.WebViewRenderProcess;
++import org.chromium.android_crwebview.webkit.WebViewRenderProcessClient;
+ 
+ import androidx.annotation.RequiresApi;
+ 
+diff --git a/android_webview/glue/java/src/com/android/webview/chromium/WebkitToSharedGlueConverter.java b/android_webview/glue/java/src/com/android/webview/chromium/WebkitToSharedGlueConverter.java
+index 4b87e28ad59dd..b48d136348919 100644
+--- a/android_webview/glue/java/src/com/android/webview/chromium/WebkitToSharedGlueConverter.java
++++ b/android_webview/glue/java/src/com/android/webview/chromium/WebkitToSharedGlueConverter.java
+@@ -5,14 +5,14 @@
+ package com.android.webview.chromium;
+ 
+ import android.os.Build;
+-import android.webkit.CookieManager;
+-import android.webkit.SafeBrowsingResponse;
+-import android.webkit.ServiceWorkerWebSettings;
+-import android.webkit.WebMessagePort;
+-import android.webkit.WebResourceError;
+-import android.webkit.WebResourceRequest;
+-import android.webkit.WebSettings;
+-import android.webkit.WebView;
++import org.chromium.android_crwebview.webkit.CookieManager;
++import org.chromium.android_crwebview.webkit.SafeBrowsingResponse;
++import org.chromium.android_crwebview.webkit.ServiceWorkerWebSettings;
++import org.chromium.android_crwebview.webkit.WebMessagePort;
++import org.chromium.android_crwebview.webkit.WebResourceError;
++import org.chromium.android_crwebview.webkit.WebResourceRequest;
++import org.chromium.android_crwebview.webkit.WebSettings;
++import org.chromium.android_crwebview.webkit.WebView;
+ 
+ import androidx.annotation.RequiresApi;
+ 

@@ -1,0 +1,322 @@
+diff --git a/android_webview/support_library/BUILD.gn b/android_webview/support_library/BUILD.gn
+index 9fcacc0d1df8c..e8db86a0f9a6d 100644
+--- a/android_webview/support_library/BUILD.gn
++++ b/android_webview/support_library/BUILD.gn
+@@ -36,6 +36,7 @@ android_library("support_lib_glue_java") {
+   ]
+ 
+   deps = [
++    "//android_webview:webkit_glue_java",
+     "//android_webview:browser_java",
+     "//android_webview:common_java",
+     "//android_webview:common_platform_services_java",
+diff --git a/android_webview/support_library/boundary_interfaces/BUILD.gn b/android_webview/support_library/boundary_interfaces/BUILD.gn
+index aa9de838775f8..3083b667efb45 100644
+--- a/android_webview/support_library/boundary_interfaces/BUILD.gn
++++ b/android_webview/support_library/boundary_interfaces/BUILD.gn
+@@ -52,7 +52,8 @@ android_library("boundary_interface_java") {
+   # build when we mirror this into AndroidX. We are only permitted to depend on
+   # core Android classes and other AndroidX classes (must be in the androidx.*
+   # package name).
+-  deps = [ "//third_party/androidx:androidx_annotation_annotation_java" ]
++  deps = [ "//third_party/androidx:androidx_annotation_annotation_java", "//android_webview:webkit_glue_java" ]
++  #deps = [ "//third_party/androidx:androidx_annotation_annotation_java" ]
+ }
+ 
+ android_apk("boundary_interface_example_apk") {
+diff --git a/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/ProfileBoundaryInterface.java b/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/ProfileBoundaryInterface.java
+index 304b3b164e04a..4357cbce0a7fa 100644
+--- a/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/ProfileBoundaryInterface.java
++++ b/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/ProfileBoundaryInterface.java
+@@ -4,11 +4,11 @@
+ 
+ package org.chromium.support_lib_boundary;
+ 
+-import android.webkit.CookieManager;
+-import android.webkit.GeolocationPermissions;
+-import android.webkit.ServiceWorkerController;
+-import android.webkit.ValueCallback;
+-import android.webkit.WebStorage;
++import org.chromium.android_crwebview.webkit.CookieManager;
++import org.chromium.android_crwebview.webkit.GeolocationPermissions;
++import org.chromium.android_crwebview.webkit.ServiceWorkerController;
++import org.chromium.android_crwebview.webkit.ValueCallback;
++import org.chromium.android_crwebview.webkit.WebStorage;
+ 
+ import java.lang.reflect.InvocationHandler;
+ 
+diff --git a/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/ServiceWorkerClientBoundaryInterface.java b/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/ServiceWorkerClientBoundaryInterface.java
+index 713ba5c226690..0616793702940 100644
+--- a/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/ServiceWorkerClientBoundaryInterface.java
++++ b/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/ServiceWorkerClientBoundaryInterface.java
+@@ -4,8 +4,8 @@
+ 
+ package org.chromium.support_lib_boundary;
+ 
+-import android.webkit.WebResourceRequest;
+-import android.webkit.WebResourceResponse;
++import org.chromium.android_crwebview.webkit.WebResourceRequest;
++import org.chromium.android_crwebview.webkit.WebResourceResponse;
+ 
+ /** Boundary interface for ServiceWorkerClient. */
+ public interface ServiceWorkerClientBoundaryInterface extends FeatureFlagHolderBoundaryInterface {
+diff --git a/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/StaticsBoundaryInterface.java b/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/StaticsBoundaryInterface.java
+index d39558f4963e6..bbb87d65a0def 100644
+--- a/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/StaticsBoundaryInterface.java
++++ b/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/StaticsBoundaryInterface.java
+@@ -6,7 +6,7 @@ package org.chromium.support_lib_boundary;
+ 
+ import android.content.Context;
+ import android.net.Uri;
+-import android.webkit.ValueCallback;
++import org.chromium.android_crwebview.webkit.ValueCallback;
+ 
+ import java.util.List;
+ import java.util.Set;
+diff --git a/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/WebMessageListenerBoundaryInterface.java b/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/WebMessageListenerBoundaryInterface.java
+index 4527a098632db..010990722061b 100644
+--- a/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/WebMessageListenerBoundaryInterface.java
++++ b/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/WebMessageListenerBoundaryInterface.java
+@@ -5,7 +5,7 @@
+ package org.chromium.support_lib_boundary;
+ 
+ import android.net.Uri;
+-import android.webkit.WebView;
++import org.chromium.android_crwebview.webkit.WebView;
+ 
+ import java.lang.reflect.InvocationHandler;
+ 
+diff --git a/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/WebViewClientBoundaryInterface.java b/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/WebViewClientBoundaryInterface.java
+index 1b15869db945d..3f10112769ecf 100644
+--- a/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/WebViewClientBoundaryInterface.java
++++ b/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/WebViewClientBoundaryInterface.java
+@@ -4,9 +4,9 @@
+ 
+ package org.chromium.support_lib_boundary;
+ 
+-import android.webkit.WebResourceRequest;
+-import android.webkit.WebResourceResponse;
+-import android.webkit.WebView;
++import org.chromium.android_crwebview.webkit.WebResourceRequest;
++import org.chromium.android_crwebview.webkit.WebResourceResponse;
++import org.chromium.android_crwebview.webkit.WebView;
+ 
+ import java.lang.reflect.InvocationHandler;
+ 
+diff --git a/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/WebViewProviderBoundaryInterface.java b/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/WebViewProviderBoundaryInterface.java
+index 717b3d393ec89..94bcd0c6fb3b2 100644
+--- a/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/WebViewProviderBoundaryInterface.java
++++ b/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/WebViewProviderBoundaryInterface.java
+@@ -5,8 +5,8 @@
+ package org.chromium.support_lib_boundary;
+ 
+ import android.net.Uri;
+-import android.webkit.WebChromeClient;
+-import android.webkit.WebViewClient;
++import org.chromium.android_crwebview.webkit.WebChromeClient;
++import org.chromium.android_crwebview.webkit.WebViewClient;
+ 
+ import java.lang.reflect.InvocationHandler;
+ 
+diff --git a/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/WebViewProviderFactoryBoundaryInterface.java b/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/WebViewProviderFactoryBoundaryInterface.java
+index 521c7bbe621f5..6d84805f39aa5 100644
+--- a/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/WebViewProviderFactoryBoundaryInterface.java
++++ b/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/WebViewProviderFactoryBoundaryInterface.java
+@@ -4,7 +4,7 @@
+ 
+ package org.chromium.support_lib_boundary;
+ 
+-import android.webkit.WebView;
++import org.chromium.android_crwebview.webkit.WebView;
+ 
+ import java.lang.reflect.InvocationHandler;
+ 
+diff --git a/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/WebViewRendererClientBoundaryInterface.java b/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/WebViewRendererClientBoundaryInterface.java
+index 6e3f4f2a60919..95a46d9c5b8bf 100644
+--- a/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/WebViewRendererClientBoundaryInterface.java
++++ b/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/WebViewRendererClientBoundaryInterface.java
+@@ -4,7 +4,7 @@
+ 
+ package org.chromium.support_lib_boundary;
+ 
+-import android.webkit.WebView;
++import org.chromium.android_crwebview.webkit.WebView;
+ 
+ import java.lang.reflect.InvocationHandler;
+ 
+diff --git a/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/WebkitToCompatConverterBoundaryInterface.java b/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/WebkitToCompatConverterBoundaryInterface.java
+index c5ab5fed37cb9..ff48398e07092 100644
+--- a/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/WebkitToCompatConverterBoundaryInterface.java
++++ b/android_webview/support_library/boundary_interfaces/src/org/chromium/support_lib_boundary/WebkitToCompatConverterBoundaryInterface.java
+@@ -4,8 +4,8 @@
+ 
+ package org.chromium.support_lib_boundary;
+ 
+-import android.webkit.WebResourceRequest;
+-import android.webkit.WebSettings;
++import org.chromium.android_crwebview.webkit.WebResourceRequest;
++import org.chromium.android_crwebview.webkit.WebSettings;
+ 
+ import java.lang.reflect.InvocationHandler;
+ 
+diff --git a/android_webview/support_library/callback/BUILD.gn b/android_webview/support_library/callback/BUILD.gn
+index 2da145c9bf3b4..47228785b0589 100644
+--- a/android_webview/support_library/callback/BUILD.gn
++++ b/android_webview/support_library/callback/BUILD.gn
+@@ -13,6 +13,7 @@ android_library("callback_java") {
+   ]
+ 
+   deps = [
++    "//android_webview:webkit_glue_java",
+     "//android_webview:browser_java",
+     "//android_webview/support_library/boundary_interfaces:boundary_interface_java",
+     "//base:base_java",
+diff --git a/android_webview/support_library/callback/java/src/org/chromium/support_lib_callback_glue/SupportLibWebViewContentsClientAdapter.java b/android_webview/support_library/callback/java/src/org/chromium/support_lib_callback_glue/SupportLibWebViewContentsClientAdapter.java
+index c7624a461c718..3a60f817982c9 100644
+--- a/android_webview/support_library/callback/java/src/org/chromium/support_lib_callback_glue/SupportLibWebViewContentsClientAdapter.java
++++ b/android_webview/support_library/callback/java/src/org/chromium/support_lib_callback_glue/SupportLibWebViewContentsClientAdapter.java
+@@ -4,10 +4,10 @@
+ 
+ package org.chromium.support_lib_callback_glue;
+ 
+-import android.webkit.WebResourceRequest;
+-import android.webkit.WebResourceResponse;
+-import android.webkit.WebView;
+-import android.webkit.WebViewClient;
++import org.chromium.android_crwebview.webkit.WebResourceRequest;
++import org.chromium.android_crwebview.webkit.WebResourceResponse;
++import org.chromium.android_crwebview.webkit.WebView;
++import org.chromium.android_crwebview.webkit.WebViewClient;
+ 
+ import androidx.annotation.Nullable;
+ 
+diff --git a/android_webview/support_library/java/src/org/chromium/support_lib_glue/SupportLibProfile.java b/android_webview/support_library/java/src/org/chromium/support_lib_glue/SupportLibProfile.java
+index b50a40cccc930..4c12211061fc6 100644
+--- a/android_webview/support_library/java/src/org/chromium/support_lib_glue/SupportLibProfile.java
++++ b/android_webview/support_library/java/src/org/chromium/support_lib_glue/SupportLibProfile.java
+@@ -6,11 +6,11 @@ package org.chromium.support_lib_glue;
+ 
+ import static org.chromium.support_lib_glue.SupportLibWebViewChromiumFactory.recordApiCall;
+ 
+-import android.webkit.CookieManager;
+-import android.webkit.GeolocationPermissions;
+-import android.webkit.ServiceWorkerController;
+-import android.webkit.ValueCallback;
+-import android.webkit.WebStorage;
++import org.chromium.android_crwebview.webkit.CookieManager;
++import org.chromium.android_crwebview.webkit.GeolocationPermissions;
++import org.chromium.android_crwebview.webkit.ServiceWorkerController;
++import org.chromium.android_crwebview.webkit.ValueCallback;
++import org.chromium.android_crwebview.webkit.WebStorage;
+ 
+ import androidx.annotation.NonNull;
+ 
+diff --git a/android_webview/support_library/java/src/org/chromium/support_lib_glue/SupportLibServiceWorkerClientAdapter.java b/android_webview/support_library/java/src/org/chromium/support_lib_glue/SupportLibServiceWorkerClientAdapter.java
+index 8d8443f8b8f8d..6233d7ce31fe5 100644
+--- a/android_webview/support_library/java/src/org/chromium/support_lib_glue/SupportLibServiceWorkerClientAdapter.java
++++ b/android_webview/support_library/java/src/org/chromium/support_lib_glue/SupportLibServiceWorkerClientAdapter.java
+@@ -6,7 +6,7 @@ package org.chromium.support_lib_glue;
+ 
+ import static org.chromium.support_lib_glue.SupportLibWebViewChromiumFactory.recordApiCall;
+ 
+-import android.webkit.WebResourceResponse;
++import org.chromium.android_crwebview.webkit.WebResourceResponse;
+ 
+ import com.android.webview.chromium.WebResourceRequestAdapter;
+ 
+diff --git a/android_webview/support_library/java/src/org/chromium/support_lib_glue/SupportLibWebMessageListenerAdapter.java b/android_webview/support_library/java/src/org/chromium/support_lib_glue/SupportLibWebMessageListenerAdapter.java
+index 23613f466a513..7c7766f209208 100644
+--- a/android_webview/support_library/java/src/org/chromium/support_lib_glue/SupportLibWebMessageListenerAdapter.java
++++ b/android_webview/support_library/java/src/org/chromium/support_lib_glue/SupportLibWebMessageListenerAdapter.java
+@@ -5,7 +5,7 @@
+ package org.chromium.support_lib_glue;
+ 
+ import android.net.Uri;
+-import android.webkit.WebView;
++import org.chromium.android_crwebview.webkit.WebView;
+ 
+ import org.chromium.android_webview.JsReplyProxy;
+ import org.chromium.android_webview.WebMessageListener;
+diff --git a/android_webview/support_library/java/src/org/chromium/support_lib_glue/SupportLibWebSettingsAdapter.java b/android_webview/support_library/java/src/org/chromium/support_lib_glue/SupportLibWebSettingsAdapter.java
+index 0cbee02417a67..3ddee96e5dd40 100644
+--- a/android_webview/support_library/java/src/org/chromium/support_lib_glue/SupportLibWebSettingsAdapter.java
++++ b/android_webview/support_library/java/src/org/chromium/support_lib_glue/SupportLibWebSettingsAdapter.java
+@@ -6,7 +6,7 @@ package org.chromium.support_lib_glue;
+ 
+ import static org.chromium.support_lib_glue.SupportLibWebViewChromiumFactory.recordApiCall;
+ 
+-import android.webkit.WebSettings;
++import org.chromium.android_crwebview.webkit.WebSettings;
+ 
+ import org.chromium.android_webview.AwDarkMode;
+ import org.chromium.android_webview.AwSettings;
+diff --git a/android_webview/support_library/java/src/org/chromium/support_lib_glue/SupportLibWebViewChromium.java b/android_webview/support_library/java/src/org/chromium/support_lib_glue/SupportLibWebViewChromium.java
+index 6c6cad022eadc..c77362057642b 100644
+--- a/android_webview/support_library/java/src/org/chromium/support_lib_glue/SupportLibWebViewChromium.java
++++ b/android_webview/support_library/java/src/org/chromium/support_lib_glue/SupportLibWebViewChromium.java
+@@ -7,9 +7,9 @@ package org.chromium.support_lib_glue;
+ import static org.chromium.support_lib_glue.SupportLibWebViewChromiumFactory.recordApiCall;
+ 
+ import android.net.Uri;
+-import android.webkit.WebChromeClient;
+-import android.webkit.WebView;
+-import android.webkit.WebViewClient;
++import org.chromium.android_crwebview.webkit.WebChromeClient;
++import org.chromium.android_crwebview.webkit.WebView;
++import org.chromium.android_crwebview.webkit.WebViewClient;
+ 
+ import com.android.webview.chromium.SharedWebViewChromium;
+ import com.android.webview.chromium.SharedWebViewRendererClientAdapter;
+diff --git a/android_webview/support_library/java/src/org/chromium/support_lib_glue/SupportLibWebViewChromiumFactory.java b/android_webview/support_library/java/src/org/chromium/support_lib_glue/SupportLibWebViewChromiumFactory.java
+index 91dba4d92080b..44b5ff89500b1 100644
+--- a/android_webview/support_library/java/src/org/chromium/support_lib_glue/SupportLibWebViewChromiumFactory.java
++++ b/android_webview/support_library/java/src/org/chromium/support_lib_glue/SupportLibWebViewChromiumFactory.java
+@@ -6,8 +6,8 @@ package org.chromium.support_lib_glue;
+ 
+ import android.content.Context;
+ import android.net.Uri;
+-import android.webkit.ValueCallback;
+-import android.webkit.WebView;
++import org.chromium.android_crwebview.webkit.ValueCallback;
++import org.chromium.android_crwebview.webkit.WebView;
+ 
+ import androidx.annotation.IntDef;
+ 
+diff --git a/android_webview/support_library/java/src/org/chromium/support_lib_glue/SupportLibWebViewRendererClientAdapter.java b/android_webview/support_library/java/src/org/chromium/support_lib_glue/SupportLibWebViewRendererClientAdapter.java
+index 9be0197998423..56a3c032f1e15 100644
+--- a/android_webview/support_library/java/src/org/chromium/support_lib_glue/SupportLibWebViewRendererClientAdapter.java
++++ b/android_webview/support_library/java/src/org/chromium/support_lib_glue/SupportLibWebViewRendererClientAdapter.java
+@@ -3,7 +3,7 @@
+ // found in the LICENSE file.
+ package org.chromium.support_lib_glue;
+ 
+-import android.webkit.WebView;
++import org.chromium.android_crwebview.webkit.WebView;
+ 
+ import com.android.webview.chromium.SharedWebViewRendererClientAdapter;
+ 
+diff --git a/android_webview/support_library/java/src/org/chromium/support_lib_glue/SupportLibWebkitToCompatConverterAdapter.java b/android_webview/support_library/java/src/org/chromium/support_lib_glue/SupportLibWebkitToCompatConverterAdapter.java
+index 4d069492f0c05..2fc695413ecab 100644
+--- a/android_webview/support_library/java/src/org/chromium/support_lib_glue/SupportLibWebkitToCompatConverterAdapter.java
++++ b/android_webview/support_library/java/src/org/chromium/support_lib_glue/SupportLibWebkitToCompatConverterAdapter.java
+@@ -5,13 +5,13 @@
+ package org.chromium.support_lib_glue;
+ 
+ import android.os.Build;
+-import android.webkit.CookieManager;
+-import android.webkit.SafeBrowsingResponse;
+-import android.webkit.ServiceWorkerWebSettings;
+-import android.webkit.WebMessagePort;
+-import android.webkit.WebResourceError;
+-import android.webkit.WebResourceRequest;
+-import android.webkit.WebSettings;
++import org.chromium.android_crwebview.webkit.CookieManager;
++import org.chromium.android_crwebview.webkit.SafeBrowsingResponse;
++import org.chromium.android_crwebview.webkit.ServiceWorkerWebSettings;
++import org.chromium.android_crwebview.webkit.WebMessagePort;
++import org.chromium.android_crwebview.webkit.WebResourceError;
++import org.chromium.android_crwebview.webkit.WebResourceRequest;
++import org.chromium.android_crwebview.webkit.WebSettings;
+ 
+ import androidx.annotation.RequiresApi;
+ 

@@ -1,0 +1,410 @@
+diff --git a/android_webview/BUILD.gn b/android_webview/BUILD.gn
+index 145ba40cd9f62..d0e671ef83d86 100644
+--- a/android_webview/BUILD.gn
++++ b/android_webview/BUILD.gn
+@@ -384,21 +384,57 @@ if (android_64bit_target_cpu && !skip_secondary_abi_for_cq) {
+   }
+ }
+ 
++generate_jni("draw_fn_impl_jni_headers") {
++  sources =
++      [ "glue/java/src/com/android/webview/chromium/MyDrawFunctor.java" ]
++}
++
++android_library("draw_fn_impl_java") {
++  sources =
++      [ "glue/java/src/com/android/webview/chromium/MyDrawFunctor.java" ]
++  srcjar_deps = [ ":draw_fn_impl_jni_headers" ]
++  deps = [ "//third_party/jni_zero:jni_zero_java" ]
++}
++
+ # The shared library used by standalone WebView.
+ template("libwebviewchromium_tmpl") {
+   shared_library_with_jni(target_name) {
+     forward_variables_from(invoker, "*")
++    sources = [
++      "glue/java/src/draw_glue/overlays_manager.cc",
++      "glue/java/src/draw_glue/allocator.cc",
++      "glue/java/src/draw_glue/draw_functor.cc",
++    ]
+     deps = [
++      ":draw_fn_impl_jni_headers",
++      "//android_webview/browser/gfx",
++      "//android_webview/public",
++      "//base",
++      "//gpu/vulkan",
++      "//gpu/vulkan/init",
++      "//gpu/vulkan/init:skia",
++      "//ui/gl",
+       "//android_webview/lib",
+       "//android_webview/lib:webview_entry_point",
+       "//android_webview/nonembedded",
+       "//third_party/blink/public:blink",
+     ]
++
++    cflags = [
++      #"-Wshorten-64-to-32",
++      #"-Wimplicit-int-conversion",
++      #"-Wsign-compare",
++      #"-Wno-sign-conversion",
++    ]
++    ldflags = [ "-Wl,-shared,-Bsymbolic" ]
++    libs = [ "android" ]
++
+     configs -= [ "//build/config/android:hide_all_but_jni_onload" ]
+     configs += [
+       "//build/config/android:hide_all_but_jni",
+-      "//build/config/compiler:chrome_orderfile_config",
+-      "//build/config/compiler:prevent_unsafe_narrowing",
++      #"//build/config/compiler:chrome_orderfile_config",
++      #"//build/config/compiler:prevent_unsafe_narrowing",
++
+     ]
+     java_targets = webview_java_for_jni_targets
+ 
+@@ -406,7 +442,7 @@ template("libwebviewchromium_tmpl") {
+     # because our native dependencies don't match 1:1 to our Java dependencies,
+     # so there are some Chrome-only native dependencies that sneak into WebView.
+     # To fix, we can just remove any uncalled Java->Native methods.
+-    remove_uncalled_jni = true
++    #remove_uncalled_jni = true
+   }
+ }
+ 
+@@ -555,6 +591,92 @@ generate_jni("browser_jni_headers") {
+   ]
+ }
+ 
++android_library("webkit_glue_java") {
++  sources = [
++    "java/src/android/webkit/WebViewDelegateWrapper.java",
++    "java/src/org/chromium/android_crwebview/webkit/DownloadListener.java",
++    "java/src/org/chromium/android_crwebview/webkit/WebChromeClient.java",
++    "java/src/org/chromium/android_crwebview/webkit/RenderProcessGoneDetail.java",
++    "java/src/org/chromium/android_crwebview/webkit/WebViewFragment.java",
++    "java/src/org/chromium/android_crwebview/webkit/WebHistoryItem.java",
++    "java/src/org/chromium/android_crwebview/webkit/CookieManager.java",
++    "java/src/org/chromium/android_crwebview/webkit/TokenBindingService.java",
++    "java/src/org/chromium/android_crwebview/webkit/JavascriptInterface.java",
++    "java/src/org/chromium/android_crwebview/webkit/URLUtil.java",
++    "java/src/org/chromium/android_crwebview/webkit/WebMessagePort.java",
++    #"java/src/org/chromium/android_crwebview/webkit/LegacyErrorStrings.java",
++    "java/src/org/chromium/android_crwebview/webkit/JsDialogHelper.java",
++    "java/src/org/chromium/android_crwebview/webkit/ServiceWorkerWebSettings.java",
++    "java/src/org/chromium/android_crwebview/webkit/HttpAuthHandler.java",
++    "java/src/org/chromium/android_crwebview/webkit/PermissionRequest.java",
++    "java/src/org/chromium/android_crwebview/webkit/ServiceWorkerController.java",
++    "java/src/org/chromium/android_crwebview/webkit/ConsoleMessage.java",
++    "java/src/org/chromium/android_crwebview/webkit/WebViewDatabase.java",
++    "java/src/org/chromium/android_crwebview/webkit/SslErrorHandler.java",
++    "java/src/org/chromium/android_crwebview/webkit/UrlInterceptRegistry.java",
++    "java/src/org/chromium/android_crwebview/webkit/JsPromptResult.java",
++    "java/src/org/chromium/android_crwebview/webkit/ServiceWorkerClient.java",
++    "java/src/org/chromium/android_crwebview/webkit/WebResourceResponse.java",
++    "java/src/org/chromium/android_crwebview/webkit/WebSyncManager.java",
++    "java/src/org/chromium/android_crwebview/webkit/ValueCallback.java",
++    "java/src/org/chromium/android_crwebview/webkit/PluginData.java",
++    "java/src/org/chromium/android_crwebview/webkit/PluginStub.java",
++    "java/src/org/chromium/android_crwebview/webkit/ClientCertRequest.java",
++    "java/src/org/chromium/android_crwebview/webkit/WebResourceRequest.java",
++    "java/src/org/chromium/android_crwebview/webkit/UrlInterceptHandler.java",
++    "java/src/org/chromium/android_crwebview/webkit/WebSettings.java",
++    "java/src/org/chromium/android_crwebview/webkit/JsResult.java",
++    "java/src/org/chromium/android_crwebview/webkit/CookieSyncManager.java",
++    "java/src/org/chromium/android_crwebview/webkit/CacheManager.java",
++    "java/src/org/chromium/android_crwebview/webkit/PacProcessor.java",
++    "java/src/org/chromium/android_crwebview/webkit/WebViewFactoryProvider.java",
++    "java/src/org/chromium/android_crwebview/webkit/GeolocationPermissions.java",
++    "java/src/org/chromium/android_crwebview/webkit/WebBackForwardList.java",
++    "java/src/org/chromium/android_crwebview/webkit/TracingController.java",
++    "java/src/org/chromium/android_crwebview/webkit/FindAddress.java",
++    "java/src/org/chromium/android_crwebview/webkit/WebViewClient.java",
++    "java/src/org/chromium/android_crwebview/webkit/WebMessage.java",
++    "java/src/org/chromium/android_crwebview/webkit/TracingConfig.java",
++    "java/src/org/chromium/android_crwebview/webkit/FindActionModeCallback.java",
++    "java/src/org/chromium/android_crwebview/webkit/WebViewFactory.java",
++    "java/src/org/chromium/android_crwebview/webkit/WebStorage.java",
++    "java/src/org/chromium/android_crwebview/webkit/WebIconDatabase.java",
++    "java/src/org/chromium/android_crwebview/webkit/SafeBrowsingResponse.java",
++    "java/src/org/chromium/android_crwebview/webkit/WebView.java",
++    "java/src/org/chromium/android_crwebview/webkit/WebViewProvider.java",
++    "java/src/org/chromium/android_crwebview/webkit/WebViewRenderProcess.java",
++    "java/src/org/chromium/android_crwebview/webkit/WebResourceError.java",
++    "java/src/org/chromium/android_crwebview/webkit/WebViewRenderProcessClient.java",
++  ]
++
++  deps = [
++    ":webkit_glue_resources",
++    ":draw_fn_impl_java",
++    "//third_party/androidx:androidx_annotation_annotation_java",
++    "//third_party/android_deps:com_android_support_support_annotations_java",
++    #"//android_webview:browser_java",
++    #"//android_webview:common_java",
++    #"//android_webview:common_platform_services_java",
++    "//base:base_java",
++    #"//android_webview/glue:glue_java",
++    #"//build/android:build_java",
++    #"//components/embedder_support/android:util_java",
++    #"//components/webauthn/android:java",
++    #"//content/public/android:content_java",
++    #"//third_party/androidx:androidx_annotation_annotation_java",
++    #"//ui/android:ui_no_recycler_view_java",
++  ]
++
++  #srcjars = [
++  #  "crwebview/java/src/webkit_compile_resources.srcjar",
++  #]
++  #srcjar_deps = [
++  #  "//android_webview:libwebviewchromium__jni_registration",
++  #]
++
++  resources_package = "org.chromium.android_crwebview.webkit"
++}
++
+ android_library("browser_java") {
+   sources = [
+     "java/src/org/chromium/android_webview/AndroidProtocolHandler.java",
+@@ -696,7 +818,9 @@ android_library("browser_java") {
+     "java/src/org/chromium/android_webview/variations/FastVariationsSeedSafeModeAction.java",
+     "java/src/org/chromium/android_webview/variations/VariationsSeedLoader.java",
+     "java/src/org/chromium/android_webview/variations/VariationsSeedSafeModeAction.java",
++    "java/src/org/chromium/android_crwebview/webkit/JavascriptInterface.java",
+   ]
++
+   deps = [
+     ":common_aidl_java",
+     ":common_java",
+@@ -704,6 +828,7 @@ android_library("browser_java") {
+     ":common_platform_services_java",
+     ":common_variations_java",
+     ":crash_client_java",
++    ":webkit_glue_java",
+     ":resources",
+     "//android_webview/proto:metrics_bridge_records_proto_java",
+     "//base:base_java",
+@@ -780,6 +905,8 @@ android_library("browser_java") {
+   resources_package = "org.chromium.android_webview"
+ }
+ 
++
++
+ android_library("common_variations_java") {
+   sources = [
+     "java/src/org/chromium/android_webview/common/variations/VariationsServiceMetricsHelper.java",
+@@ -969,7 +1096,7 @@ android_library("android_webview_product_config_java") {
+ 
+ if (enable_resource_allowlist_generation) {
+   libwebviewchromium_tmpl("system_webview_pak_allowlist_inputs") {
+-    ldflags = [ "--collect-inputs-only" ]
++    #ldflags = [ "--collect-inputs-only" ]
+   }
+   generate_resource_allowlist("system_webview_pak_allowlist") {
+     deps = [ ":system_webview_pak_allowlist_inputs" ]
+@@ -1098,6 +1225,21 @@ android_assets("stub_assets") {
+   deps = [ "//components/resources:about_credits" ]
+ }
+ 
++java_strings_grd("crwebview_web_contents_delegate_strings_grd") {
++  grd_file = "//components/embedder_support/android/java/strings/web_contents_delegate_android_strings.grd"
++  outputs = [ "values/web_contents_delegate_android_strings.xml" ] + process_file_template(
++                android_bundle_locales_as_resources,
++                [ "values-{{source_name_part}}/web_contents_delegate_android_strings.xml" ])
++}
++
++java_strings_grd("crwebview_ui_strings_grd") {
++  grd_file = "//ui/android/java/strings/android_ui_strings.grd"
++  outputs = [ "values/android_ui_strings.xml" ] +
++            process_file_template(
++                android_bundle_locales_as_resources,
++                [ "values-{{source_name_part}}/android_ui_strings.xml" ])
++}
++
+ android_resources("resources") {
+   sources = [
+     "java/res/drawable-hdpi/ic_play_circle_outline_black_48dp.png",
+@@ -1107,13 +1249,184 @@ android_resources("resources") {
+     "java/res/drawable-xxxhdpi/ic_play_circle_outline_black_48dp.png",
+     "java/res/drawable/aw_context_menu_bg.xml",
+     "java/res/layout/aw_context_menu.xml",
++    "java/res/layout/js_prompt.xml",
++    "java/res/layout/webview_find.xml",
++    "java/res/menu/webview_find.xml",
+     "java/res/layout/aw_context_menu_fullscreen_container.xml",
+     "java/res/layout/aw_context_menu_header.xml",
+     "java/res/layout/aw_context_menu_row.xml",
+     "java/res/raw/histograms_allowlist.txt",
+     "java/res/values/styles.xml",
+   ]
+-  deps = [ ":strings_grd" ]
++
++  deps = [ ":strings_grd", ":crwebview_ui_strings_grd" ]
++  
++}
++
++
++android_resources("webkit_glue_resources") {
++  sources = [
++    "java/res_webkit/layout/js_prompt.xml",
++    "java/res_webkit/layout/webview_find.xml",
++    "java/res_webkit/menu/webview_find.xml",
++  ] 
++    
++  deps = [ ]
++
++  custom_package = "org.chromium.android_crwebview.webkit"
++  #resources_package = "org.chromium.android_crwebview.webkit"
++}
++
++android_resources("crwebview_embedder_support_resources") {
++  sources = [
++    "//components/embedder_support/android/java/res/drawable-hdpi/color_picker_advanced_select_handle.png",
++    "//components/embedder_support/android/java/res/drawable-mdpi/color_picker_advanced_select_handle.png",
++    "//components/embedder_support/android/java/res/drawable-xhdpi/color_picker_advanced_select_handle.png",
++    "//components/embedder_support/android/java/res/drawable/color_button_background.xml",
++    "//components/embedder_support/android/java/res/drawable/color_picker_border.xml",
++    "//components/embedder_support/android/java/res/layout/color_picker_advanced_component.xml",
++    "//components/embedder_support/android/java/res/layout/color_picker_dialog_view.xml",
++    "//components/embedder_support/android/java/res/layout/color_picker_suggestion_view.xml",
++    "//components/embedder_support/android/java/res/values/colors.xml",
++    "//components/embedder_support/android/java/res/values/dimens.xml",
++    "//components/embedder_support/android/java/res/values/ids.xml",
++  ]
++
++  deps = [ ":crwebview_web_contents_delegate_strings_grd" ]
++  custom_package = "org.chromium.components.embedder_support.delegate"
++}
++
++android_resources("crwebview_ui_android_resources") {
++  sources = [
++    "//ui/android/java/res/anim/emphasized.xml",
++    "//ui/android/java/res/anim/menu_enter.xml",
++    "//ui/android/java/res/anim/menu_enter_from_bottom.xml",
++    "//ui/android/java/res/anim/menu_enter_from_bottom_left.xml",
++    "//ui/android/java/res/anim/menu_enter_from_top_left.xml",
++    "//ui/android/java/res/anim/menu_exit.xml",
++    "//ui/android/java/res/anim/menu_exit_from_bottom.xml",
++    "//ui/android/java/res/anim/menu_exit_from_bottom_left.xml",
++    "//ui/android/java/res/anim/menu_exit_from_top_left.xml",
++    "//ui/android/java/res/color/blue_when_enabled_dark.xml",
++    "//ui/android/java/res/color/blue_when_enabled_list.xml",
++    "//ui/android/java/res/color/default_text_color_light_list.xml",
++    "//ui/android/java/res/color/default_text_color_list_baseline.xml",
++    "//ui/android/java/res/color/default_text_color_on_accent1_baseline_list.xml",
++    "//ui/android/java/res/color/default_text_color_secondary_light_list.xml",
++    "//ui/android/java/res/color/default_text_color_secondary_list_baseline.xml",
++    "//ui/android/java/res/color/filled_button_bg.xml",
++    "//ui/android/java/res/color/filled_button_ripple_color.xml",
++    "//ui/android/java/res/color/list_menu_item_icon_color_list.xml",
++    "//ui/android/java/res/color/list_menu_item_text_color_list.xml",
++    "//ui/android/java/res/color/text_button_ripple_color_list_baseline.xml",
++    "//ui/android/java/res/drawable-hdpi/btn_close.png",
++    "//ui/android/java/res/drawable-hdpi/ic_expand_less_black_24dp.png",
++    "//ui/android/java/res/drawable-hdpi/ic_expand_more_black_24dp.png",
++    "//ui/android/java/res/drawable-hdpi/popup_bg.9.png",
++    "//ui/android/java/res/drawable-hdpi/popup_bg_8dp.9.png",
++    "//ui/android/java/res/drawable-mdpi/btn_close.png",
++    "//ui/android/java/res/drawable-mdpi/ic_expand_less_black_24dp.png",
++    "//ui/android/java/res/drawable-mdpi/ic_expand_more_black_24dp.png",
++    "//ui/android/java/res/drawable-mdpi/popup_bg.9.png",
++    "//ui/android/java/res/drawable-mdpi/popup_bg_8dp.9.png",
++    "//ui/android/java/res/drawable-xhdpi/btn_close.png",
++    "//ui/android/java/res/drawable-xhdpi/ic_expand_less_black_24dp.png",
++    "//ui/android/java/res/drawable-xhdpi/ic_expand_more_black_24dp.png",
++    "//ui/android/java/res/drawable-xhdpi/popup_bg.9.png",
++    "//ui/android/java/res/drawable-xhdpi/popup_bg_8dp.9.png",
++    "//ui/android/java/res/drawable-xxhdpi/btn_close.png",
++    "//ui/android/java/res/drawable-xxhdpi/ic_expand_less_black_24dp.png",
++    "//ui/android/java/res/drawable-xxhdpi/ic_expand_more_black_24dp.png",
++    "//ui/android/java/res/drawable-xxhdpi/popup_bg.9.png",
++    "//ui/android/java/res/drawable-xxhdpi/popup_bg_8dp.9.png",
++    "//ui/android/java/res/drawable-xxxhdpi/btn_close.png",
++    "//ui/android/java/res/drawable-xxxhdpi/ic_expand_less_black_24dp.png",
++    "//ui/android/java/res/drawable-xxxhdpi/ic_expand_more_black_24dp.png",
++    "//ui/android/java/res/drawable-xxxhdpi/popup_bg.9.png",
++    "//ui/android/java/res/drawable-xxxhdpi/popup_bg_8dp.9.png",
++    "//ui/android/java/res/drawable/custom_toast_background.xml",
++    "//ui/android/java/res/drawable/dialog_bg_baseline.xml",
++    "//ui/android/java/res/drawable/drag_handlebar.xml",
++    "//ui/android/java/res/drawable/drag_shadow_background.xml",
++    "//ui/android/java/res/drawable/ic_apps_blue_24dp.xml",
++    "//ui/android/java/res/drawable/ic_expand_more_horizontal_black_24dp.xml",
++    "//ui/android/java/res/drawable/ic_globe_24dp.xml",
++    "//ui/android/java/res/drawable/ic_globe_48dp.xml",
++    "//ui/android/java/res/drawable/list_menu_background.xml",
++    "//ui/android/java/res/drawable/menu_bg_baseline.xml",
++    "//ui/android/java/res/drawable/transition_expand_less_expand_more_black_24dp.xml",
++    "//ui/android/java/res/drawable/transition_expand_more_expand_less_black_24dp.xml",
++    "//ui/android/java/res/font/accent_font.xml",
++    "//ui/android/java/res/layout/custom_toast_layout.xml",
++    "//ui/android/java/res/layout/dropdown_item.xml",
++    "//ui/android/java/res/layout/horizontal_divider.xml",
++    "//ui/android/java/res/layout/list_menu_item.xml",
++    "//ui/android/java/res/layout/list_menu_layout.xml",
++    "//ui/android/java/res/layout/list_section_divider.xml",
++    "//ui/android/java/res/values-ldrtl/dimens.xml",
++    "//ui/android/java/res/values-ldrtl/values.xml",
++    "//ui/android/java/res/values-night/colors.xml",
++    "//ui/android/java/res/values-night/dimens.xml",
++    "//ui/android/java/res/values-sw600dp/dimens.xml",
++    "//ui/android/java/res/values-sw600dp/values.xml",
++    "//ui/android/java/res/values-sw720dp/values.xml",
++    "//ui/android/java/res/values-v31/colors.xml",
++    "//ui/android/java/res/values/attrs.xml",
++    "//ui/android/java/res/values/color_palette.xml",
++    "//ui/android/java/res/values/dimens.xml",
++    "//ui/android/java/res/values/font_certs.xml",
++    "//ui/android/java/res/values/ids.xml",
++    "//ui/android/java/res/values/one_off_colors.xml",
++    "//ui/android/java/res/values/overlayable.xml",
++    "//ui/android/java/res/values/semantic_colors_adaptive.xml",
++    "//ui/android/java/res/values/semantic_colors_non_adaptive.xml",
++    "//ui/android/java/res/values/strings.xml",
++    "//ui/android/java/res/values/styles.xml",
++    "//ui/android/java/res/values/values.xml",
++  ]
++
++  #shared_resources = true
++  custom_package = "org.chromium.ui"
++  deps = [ ":crwebview_ui_strings_grd" ]
++}
++
++java_strings_grd("crwebview_content_strings_grd") {
++  grd_file = "//content/public/android/java/strings/android_content_strings.grd"
++  outputs = [ "values/android_content_strings.xml" ] +
++            process_file_template(
++                android_bundle_locales_as_resources,
++                [ "values-{{source_name_part}}/android_content_strings.xml" ])
++}
++
++android_resources("crwebview_content_resources") {
++  deps = [
++    ":crwebview_content_strings_grd",
++    ":crwebview_ui_android_resources",
++  ]
++  sources = [
++    "//content/public/android/java/res/drawable-hdpi/ic_search.png",
++    "//content/public/android/java/res/drawable-mdpi/ic_search.png",
++    "//content/public/android/java/res/drawable-xhdpi/ic_search.png",
++    "//content/public/android/java/res/drawable-xxhdpi/ic_search.png",
++    "//content/public/android/java/res/drawable-xxxhdpi/ic_search.png",
++    "//content/public/android/java/res/drawable/floating_popup_background.xml",
++    "//content/public/android/java/res/drawable/ic_paste_as_plain_text.xml",
++    "//content/public/android/java/res/layout-land/date_time_picker_dialog.xml",
++    "//content/public/android/java/res/layout/date_time_picker_dialog.xml",
++    "//content/public/android/java/res/layout/date_time_suggestion.xml",
++    "//content/public/android/java/res/layout/multi_field_time_picker_dialog.xml",
++    "//content/public/android/java/res/layout/text_edit_suggestion_container.xml",
++    "//content/public/android/java/res/layout/text_edit_suggestion_item.xml",
++    "//content/public/android/java/res/layout/text_edit_suggestion_list_footer.xml",
++    "//content/public/android/java/res/layout/two_field_date_picker.xml",
++    "//content/public/android/java/res/values/attrs.xml",
++    "//content/public/android/java/res/values/dimens.xml",
++    "//content/public/android/java/res/values/ids.xml",
++    "//content/public/android/java/res/values/strings.xml",
++    "//content/public/android/java/res/values/styles.xml",
++  ]
++  #shared_resources = true
++  custom_package = "org.chromium.content"
+ }
+ 
+ grit("generate_webui_resources") {
