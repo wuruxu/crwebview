@@ -448,13 +448,12 @@ java_library("webkit_copy_java") {
   ]
 
   sources = [
-    "../glue/java/src/org/chromium/build/NativeLibraries.java",
-    "../glue/java/src/org/chromium/android_webview/ProductConfig.java",
-    "../glue/java/src/org/chromium/build/BuildConfig.java",
+    "java/src/org/chromium/build/NativeLibraries.java",
+    "java/src/org/chromium/android_webview/ProductConfig.java",
+    "java/src/org/chromium/build/BuildConfig.java",
   ]
 
   srcjars = [
-  #  "../glue/java/src/webkit_compile_resources.srcjar",
   ]
 
   srcjar_deps = [
