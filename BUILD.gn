@@ -676,35 +676,3 @@ dist_aar("crwebkit_aar") {
   android_manifest = "//android_webview/crwebview/webkit_AndroidManifest.xml"
   output = "$root_build_dir/android_crwebview_webkit.WebView-v2.0.0.aar"
 }
-
-dist_aar("ui_resources_aar") {
-  deps = [
-    ":ui_android_manifest",
-    "//ui/android:ui_no_recycler_view_java",
-    #"//ui/android:ui_java_resources",
-  ]
-
-  jar_included_patterns = [
-    "not_include_any_jar",
-  ]
-  resource_included_patterns = [ "obj/ui/android/*" ]
-  android_manifest = ui_android_manifest
-  output = "$root_build_dir/ui-android-resources-v2.0.0.aar"
-}
-
-dist_aar("content_resources_aar") {
-  deps = [
-    ":content_android_manifest",
-    "//content/public/android:content_full_java",
-  ]
-
-  jar_included_patterns = [
-    "not_include_any_jar",
-  ]
-  resource_included_patterns = [
-    "obj/content/public/android/*",
-    #"obj/ui/android/*",
-  ]
-  android_manifest = content_android_manifest
-  output = "$root_build_dir/content-android-resources-v2.0.0.aar"
-}
