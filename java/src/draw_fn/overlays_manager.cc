@@ -1,11 +1,11 @@
-// Copyright 2020 The Chromium Authors. All rights reserved.
+// Copyright 2020 The Chromium Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "android_webview/crwebview/java/src/draw_fn/overlays_manager.h"
+#include "android_webview/glue/java/src/draw_glue/overlays_manager.h"
 
 #include "android_webview/public/browser/draw_fn.h"
-#include "android_webview/crwebview/java/src/draw_fn/allocator.h"
+#include "android_webview/glue/java/src/draw_glue/allocator.h"
 #include "base/android/build_info.h"
 #include "base/android/jni_array.h"
 #include "base/logging.h"

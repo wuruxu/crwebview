@@ -1,4 +1,4 @@
-// Copyright 2020 The Chromium Authors. All rights reserved.
+// Copyright 2020 The Chromium Authors
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -7,17 +7,17 @@
 
 #include <jni.h>
 
-#include "android_webview/crwebview/java/src/draw_fn/overlays_manager.h"
+#include "android_webview/glue/java/src/draw_glue/overlays_manager.h"
 #include "base/android/scoped_java_ref.h"
 #include "ui/gl/android/scoped_a_native_window.h"
 #include "ui/gl/android/scoped_java_surface.h"
 
 namespace draw_fn {
 
-class ContextManager {
+class MyDrawFunctor {
  public:
-  ContextManager();
-  virtual ~ContextManager();
+  MyDrawFunctor();
+  virtual ~MyDrawFunctor();
 
   void SetSurface(JNIEnv* env,
                   const base::android::JavaRef<jobject>& surface,
