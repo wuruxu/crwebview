@@ -21,6 +21,102 @@ copy("copy_snapshot_blob") {
   ]
 }
 
+android_resources("webkit_glue_resources") {
+  sources = [
+    "java/res_webkit/layout/js_prompt.xml",
+    "java/res_webkit/layout/webview_find.xml",
+    "java/res_webkit/menu/webview_find.xml",
+  ]
+
+  deps = [ ]
+  custom_package = "org.chromium.android_crwebview.webkit"
+}
+
+generate_jni("draw_fn_impl_jni_headers") {
+  sources = [
+    "java/src/org/chromium/android_crwebview/webkit/MyDrawFunctor.java"
+  ]
+}
+
+android_library("draw_fn_impl_java") {
+  sources = [
+    "java/src/org/chromium/android_crwebview/webkit/MyDrawFunctor.java"
+  ]
+  srcjar_deps = [ ":draw_fn_impl_jni_headers" ]
+  deps = [ "//third_party/jni_zero:jni_zero_java" ]
+}
+
+android_library("webkit_glue_java") {
+  sources = [
+    "java/src/android/webkit/WebViewDelegateWrapper.java",
+    "java/src/org/chromium/android_crwebview/webkit/DownloadListener.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebChromeClient.java",
+    "java/src/org/chromium/android_crwebview/webkit/RenderProcessGoneDetail.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebViewFragment.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebHistoryItem.java",
+    "java/src/org/chromium/android_crwebview/webkit/CookieManager.java",
+    "java/src/org/chromium/android_crwebview/webkit/TokenBindingService.java",
+    "java/src/org/chromium/android_crwebview/webkit/JavascriptInterface.java",
+    "java/src/org/chromium/android_crwebview/webkit/URLUtil.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebMessagePort.java",
+    "java/src/org/chromium/android_crwebview/webkit/MyDrawFunctor.java"
+    #"java/src/org/chromium/android_crwebview/webkit/LegacyErrorStrings.java",
+    "java/src/org/chromium/android_crwebview/webkit/JsDialogHelper.java",
+    "java/src/org/chromium/android_crwebview/webkit/ServiceWorkerWebSettings.java",
+    "java/src/org/chromium/android_crwebview/webkit/HttpAuthHandler.java",
+    "java/src/org/chromium/android_crwebview/webkit/PermissionRequest.java",
+    "java/src/org/chromium/android_crwebview/webkit/ServiceWorkerController.java",
+    "java/src/org/chromium/android_crwebview/webkit/ConsoleMessage.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebViewDatabase.java",
+    "java/src/org/chromium/android_crwebview/webkit/SslErrorHandler.java",
+    "java/src/org/chromium/android_crwebview/webkit/UrlInterceptRegistry.java",
+    "java/src/org/chromium/android_crwebview/webkit/JsPromptResult.java",
+    "java/src/org/chromium/android_crwebview/webkit/ServiceWorkerClient.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebResourceResponse.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebSyncManager.java",
+    "java/src/org/chromium/android_crwebview/webkit/ValueCallback.java",
+    "java/src/org/chromium/android_crwebview/webkit/PluginData.java",
+    "java/src/org/chromium/android_crwebview/webkit/PluginStub.java",
+    "java/src/org/chromium/android_crwebview/webkit/ClientCertRequest.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebResourceRequest.java",
+    "java/src/org/chromium/android_crwebview/webkit/UrlInterceptHandler.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebSettings.java",
+    "java/src/org/chromium/android_crwebview/webkit/JsResult.java",
+    "java/src/org/chromium/android_crwebview/webkit/CookieSyncManager.java",
+    "java/src/org/chromium/android_crwebview/webkit/CacheManager.java",
+    "java/src/org/chromium/android_crwebview/webkit/PacProcessor.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebViewFactoryProvider.java",
+    "java/src/org/chromium/android_crwebview/webkit/GeolocationPermissions.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebBackForwardList.java",
+    "java/src/org/chromium/android_crwebview/webkit/TracingController.java",
+    "java/src/org/chromium/android_crwebview/webkit/FindAddress.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebViewClient.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebMessage.java",
+    "java/src/org/chromium/android_crwebview/webkit/TracingConfig.java",
+    "java/src/org/chromium/android_crwebview/webkit/FindActionModeCallback.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebViewFactory.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebStorage.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebIconDatabase.java",
+    "java/src/org/chromium/android_crwebview/webkit/SafeBrowsingResponse.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebView.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebViewProvider.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebViewRenderProcess.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebResourceError.java",
+    "java/src/org/chromium/android_crwebview/webkit/WebViewRenderProcessClient.java",
+  ]
+
+  deps = [
+    ":webkit_glue_resources",
+    ":draw_fn_impl_java",
+    "//third_party/androidx:androidx_annotation_annotation_java",
+    "//third_party/android_deps:com_android_support_support_annotations_java",
+    "//base:base_java",
+  ]
+
+
+  resources_package = "org.chromium.android_crwebview.webkit"
+}
+
 android_library("copy_webkit_java") {
   supports_android = true
   requires_android = true
