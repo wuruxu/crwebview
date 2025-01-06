@@ -7,17 +7,17 @@
 
 #include <jni.h>
 
-#include "android_webview/glue/java/src/draw_glue/overlays_manager.h"
+#include "android_webview/crwebview/java/src/draw_fn/overlays_manager.h"
 #include "base/android/scoped_java_ref.h"
 #include "ui/gl/android/scoped_a_native_window.h"
 #include "ui/gl/android/scoped_java_surface.h"
 
 namespace draw_fn {
 
-class MyDrawFunctor {
+class DrawFunctor {
  public:
-  MyDrawFunctor();
-  virtual ~MyDrawFunctor();
+  DrawFunctor();
+  virtual ~DrawFunctor();
 
   void SetSurface(JNIEnv* env,
                   const base::android::JavaRef<jobject>& surface,

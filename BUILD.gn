@@ -3,12 +3,10 @@
 # found in the LICENSE file.
 
 import("//android_webview/system_webview_apk_tmpl.gni")
-import("//android_webview/test/shared.gni")
 import("//android_webview/variables.gni")
 import("//build/config/android/rules.gni")
 import("//build/config/python.gni")
 import("//device/vr/buildflags/buildflags.gni")
-import("//testing/test.gni")
 import("//third_party/jni_zero/jni_zero.gni")
 
 copy("copy_snapshot_blob") {
@@ -59,7 +57,7 @@ android_library("webkit_glue_java") {
     "java/src/org/chromium/android_crwebview/webkit/JavascriptInterface.java",
     "java/src/org/chromium/android_crwebview/webkit/URLUtil.java",
     "java/src/org/chromium/android_crwebview/webkit/WebMessagePort.java",
-    "java/src/org/chromium/android_crwebview/webkit/MyDrawFunctor.java"
+    "java/src/org/chromium/android_crwebview/webkit/MyDrawFunctor.java",
     #"java/src/org/chromium/android_crwebview/webkit/LegacyErrorStrings.java",
     "java/src/org/chromium/android_crwebview/webkit/JsDialogHelper.java",
     "java/src/org/chromium/android_crwebview/webkit/ServiceWorkerWebSettings.java",
@@ -110,6 +108,7 @@ android_library("webkit_glue_java") {
     ":draw_fn_impl_java",
     "//third_party/androidx:androidx_annotation_annotation_java",
     "//third_party/android_deps:com_android_support_support_annotations_java",
+    "//third_party/jni_zero:jni_zero_java",
     "//base:base_java",
   ]
 
@@ -122,8 +121,6 @@ android_library("copy_webkit_java") {
   requires_android = true
 
   deps = [
-    "//android_webview:crwebview_embedder_support_resources",
-    "//android_webview:crwebview_content_resources",
     "//android_webview:platform_service_bridge_upstream_implementation_java",
   ]
 
@@ -149,13 +146,6 @@ dist_aar("crwebkit_aar") {
     "//android_webview:locale_pak_assets",
     "//android_webview:libwebviewchromium",
     "//android_webview/glue:glue_java",
-    #"//android_webview:webkit_glue_java",
-    #"//android_webview:pak_file_assets",
-    #"//android_webview:weblayer_webview_assets",
-    #"//android_webview:repack_locales",
-    #"//android_webview:repack_100_percent",
-    #"//android_webview:repack_pack",
-    #"//android_webview:platform_service_bridge_upstream_implementation_java",
     "//components/android_autofill/browser:java",
     "//components/autofill/android:autofill_java",
     "//components/autofill/core/common/mojom:mojo_types_java",
@@ -201,6 +191,7 @@ dist_aar("crwebkit_aar") {
   #generate_final_jni = true
   #shared_resources = true
   native_libraries = [ "$root_build_dir/libwebviewchromium.so" ]
+  android_sdk_version = "35"
 
   # The aar should only include weblayer files. The client will provide the
   # support library.
@@ -218,6 +209,6 @@ dist_aar("crwebkit_aar") {
 
   # dist_aar does not take the manifest from libraries in deps, so we have to
   # specify again here.
-  android_manifest = "//android_webview/crwebview/webkit_AndroidManifest.xml"
+  android_manifest = "webkit_AndroidManifest.xml"
   output = "$root_build_dir/android_crwebview_webkit.WebView-v2.0.0.aar"
 }

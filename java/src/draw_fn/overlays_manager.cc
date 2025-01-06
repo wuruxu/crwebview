@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "android_webview/glue/java/src/draw_glue/overlays_manager.h"
+#include "android_webview/crwebview/java/src/draw_fn/overlays_manager.h"
 
 #include "android_webview/public/browser/draw_fn.h"
-#include "android_webview/glue/java/src/draw_glue/allocator.h"
+#include "android_webview/crwebview/java/src/draw_fn/allocator.h"
 #include "base/android/build_info.h"
 #include "base/android/jni_array.h"
 #include "base/logging.h"

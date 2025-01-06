@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "android_webview/glue/java/src/draw_glue/draw_functor.h"
+#include "android_webview/crwebview/java/src/draw_fn/draw_functor.h"
 
 #include <EGL/egl.h>
 #include <GLES2/gl2.h>
 
 #include "android_webview/public/browser/draw_fn.h"
-#include "android_webview/glue/java/src/draw_glue/allocator.h"
+#include "android_webview/crwebview/java/src/draw_fn/allocator.h"
 #include "base/android/jni_array.h"
 #include "base/logging.h"
 #include "base/memory/raw_ptr.h"
@@ -46,7 +46,7 @@
 #include "ui/gfx/color_space.h"
 
 // Must come after all headers that specialize FromJniType() / ToJniType().
-#include "android_webview/draw_fn_impl_jni_headers/MyDrawFunctor_jni.h"
+#include "android_webview/crwebview/draw_fn_impl_jni_headers/MyDrawFunctor_jni.h"
 
 namespace draw_fn {
 
@@ -177,7 +177,7 @@ class FunctorDrawable : public SkDrawable {
   int height_;
 };
 
-class MyDrawFunctorVulkan : public MyDrawFunctor {
+class MyDrawFunctorVulkan : public DrawFunctor {
  public:
   MyDrawFunctorVulkan();
   ~MyDrawFunctorVulkan() override;
@@ -443,32 +443,32 @@ void MyDrawFunctorVulkan::MaybeCallFunctorInitVk() {
 }  // namespace
 
 
-MyDrawFunctor::MyDrawFunctor() = default;
+DrawFunctor::DrawFunctor() = default;
 
-MyDrawFunctor::~MyDrawFunctor() = default;
+DrawFunctor::~DrawFunctor() = default;
 
-void MyDrawFunctor::SetSurface(JNIEnv* env,
+void DrawFunctor::SetSurface(JNIEnv* env,
                                 const base::android::JavaRef<jobject>& surface,
                                 int width,
                                 int height) {
-  LOG(INFO) << "crWebView MyDrawFunctor SetSurface called width " << width << " height " << height;
+  LOG(INFO) << "crWebView DrawFunctor SetSurface called width " << width << " height " << height;
   if (!java_surface_.IsEmpty()) {
-    LOG(INFO) << "crWebView MyDrawFunctor SetSurface SETP 001";
+    LOG(INFO) << "crWebView DrawFunctor SetSurface SETP 001";
     DestroyContext();
   }
   if (!surface.is_null()) {
-    LOG(INFO) << "crWebView MyDrawFunctor SetSurface SETP 002";
+    LOG(INFO) << "crWebView DrawFunctor SetSurface SETP 002";
     CreateContext(env, surface, width, height);
   }
 }
 
-void MyDrawFunctor::SetOverlaysSurface(
+void DrawFunctor::SetOverlaysSurface(
     JNIEnv* env,
     const base::android::JavaRef<jobject>& surface) {
   //overlays_manager_.SetSurface(current_functor_, env, surface);
 }
 
-void MyDrawFunctor::Sync(JNIEnv* env, int functor, bool apply_force_dark) {
+void DrawFunctor::Sync(JNIEnv* env, int functor, bool apply_force_dark) {
   bool functor_changing = current_functor_ != functor;
   if (current_functor_ && functor_changing) {
     FunctorData& data = Allocator::Get()->get(current_functor_);
@@ -486,20 +486,20 @@ void MyDrawFunctor::Sync(JNIEnv* env, int functor, bool apply_force_dark) {
     CurrentFunctorChanged();
 }
 
-void MyDrawFunctor::CreateContext(
+void DrawFunctor::CreateContext(
     JNIEnv* env,
     const base::android::JavaRef<jobject>& surface,
     int width,
     int height) {
-  LOG(INFO) << "crWebView MyDrawFunctor CreateContext called";
+  LOG(INFO) << "crWebView DrawFunctor CreateContext called";
   java_surface_ = gl::ScopedJavaSurface(surface, /*auto_release=*/false);
   if (!java_surface_.IsValid()) {
     return;
   }
 
-  LOG(INFO) << "*crWebView MyDrawFunctor CreateContext called STEP 001 " << this ;
+  LOG(INFO) << "*crWebView DrawFunctor CreateContext called STEP 001 " << this ;
   native_window_ = gl::ScopedANativeWindow(java_surface_);
-  LOG(INFO) << "*crWebView MyDrawFunctor CreateContext called STEP 002 native_window_ ";
+  LOG(INFO) << "*crWebView DrawFunctor CreateContext called STEP 002 native_window_ ";
   CHECK(native_window_);
 
   DoCreateContext(env, width, height);
@@ -525,7 +525,7 @@ static jlong JNI_MyDrawFunctor_GetDrawFnFunctionTable(JNIEnv* env,
 }
 
 static jlong JNI_MyDrawFunctor_Init(JNIEnv* env, jboolean use_vulkan) {
-  MyDrawFunctor* manager = new draw_fn::MyDrawFunctorVulkan;
+  DrawFunctor* manager = new draw_fn::MyDrawFunctorVulkan;
   return reinterpret_cast<intptr_t>(manager);
 }
 

@@ -4,7 +4,6 @@
 
 package org.chromium.android_crwebview.webkit;
 
-//import org.chromium.android_webview.common.Lifetime;
 import android.view.Surface;
 
 import org.jni_zero.JNINamespace;
@@ -13,39 +12,39 @@ import org.jni_zero.NativeMethods;
 @JNINamespace("draw_fn")
 public class MyDrawFunctor {
     private Surface mCurrentSurface;
-    private final long mDrawFunctor;
+    private final long mMyDrawFunctor;
 
     public static long getDrawFnFunctionTable() {
         return MyDrawFunctorJni.get().getDrawFnFunctionTable(true);
     }
 
     public MyDrawFunctor() {
-        mDrawFunctor = MyDrawFunctorJni.get().init(true);
+        mMyDrawFunctor = MyDrawFunctorJni.get().init(true);
     }
 
     public void setSurface(Surface surface, int width, int height) {
         if (mCurrentSurface == surface) {
             if (surface != null) {
-                MyDrawFunctorJni.get().resizeSurface(mDrawFunctor, width, height);
+                MyDrawFunctorJni.get().resizeSurface(mMyDrawFunctor, width, height);
             }
             return;
         }
         mCurrentSurface = surface;
-        MyDrawFunctorJni.get().setSurface(mDrawFunctor, surface, width, height);
+        MyDrawFunctorJni.get().setSurface(mMyDrawFunctor, surface, width, height);
     }
 
     public void setOverlaysSurface(Surface surface) {
-        MyDrawFunctorJni.get().setOverlaysSurface(mDrawFunctor, surface);
+        MyDrawFunctorJni.get().setOverlaysSurface(mMyDrawFunctor, surface);
     }
 
     public void sync(int functor, boolean applyForceDark) {
-        MyDrawFunctorJni.get().sync(mDrawFunctor, functor, applyForceDark);
+        MyDrawFunctorJni.get().sync(mMyDrawFunctor, functor, applyForceDark);
     }
 
     // Uses functor from last sync.
     public int[] draw(int width, int height, int scrollX, int scrollY, boolean readbackQuadrants) {
         return MyDrawFunctorJni.get()
-                .draw(mDrawFunctor, width, height, scrollX, scrollY, readbackQuadrants);
+                .draw(mMyDrawFunctor, width, height, scrollX, scrollY, readbackQuadrants);
     }
 
     @NativeMethods
