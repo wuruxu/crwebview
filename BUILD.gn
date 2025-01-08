@@ -116,12 +116,13 @@ android_library("webkit_glue_java") {
   resources_package = "org.chromium.android_crwebview.webkit"
 }
 
-android_library("copy_webkit_java") {
+java_library("copy_webkit_java") {
   supports_android = true
   requires_android = true
 
   deps = [
     "//android_webview:platform_service_bridge_upstream_implementation_java",
+    "//third_party/jni_zero:jni_zero_java",
   ]
 
   sources = [
@@ -165,6 +166,7 @@ dist_aar("crwebkit_aar") {
     "//third_party/androidx_javascriptengine:javascriptengine_java",
     "//ui/accessibility:ax_base_java",
     "//content/public/android:content_java_resources",
+    "//third_party/icu:icu_assets",
   ]
 
   jar_excluded_patterns = [
