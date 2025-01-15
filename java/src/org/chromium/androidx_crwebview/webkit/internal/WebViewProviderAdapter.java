@@ -18,6 +18,7 @@ package org.chromium.androidx_crwebview.webkit.internal;
 
 import android.annotation.SuppressLint;
 import android.net.Uri;
+import android.util.Log;
 import org.chromium.android_crwebview.webkit.ValueCallback;
 import org.chromium.android_crwebview.webkit.WebChromeClient;
 import org.chromium.android_crwebview.webkit.WebView;
@@ -229,21 +230,22 @@ public class WebViewProviderAdapter {
             @NonNull SpeculativeLoadingParameters params,
             @NonNull PrerenderOperationCallback callback) {
 
-        InvocationHandler paramsBoundaryInterface =
-                BoundaryInterfaceReflectionUtil.createInvocationHandlerFor(
-                        new SpeculativeLoadingParametersAdapter(params));
-        ValueCallback<Void> activationCallback = (value) -> {
-            // value will always be null.
-            callback.onPrerenderActivated();
-        };
-        ValueCallback<Throwable> errorCallback = (throwable) -> {
-            callback.onError(new PrerenderException("Prerender operation failed", throwable));
-        };
-        mImpl.prerenderUrl(
-                url,
-                cancellationSignal,
-                paramsBoundaryInterface,
-                activationCallback,
-                errorCallback);
+        Log.i("crWebView androidx", " prerenderUrlAsync url " + url);
+        //InvocationHandler paramsBoundaryInterface =
+        //        BoundaryInterfaceReflectionUtil.createInvocationHandlerFor(
+        //                new SpeculativeLoadingParametersAdapter(params));
+        //ValueCallback<Void> activationCallback = (value) -> {
+        //    // value will always be null.
+        //    callback.onPrerenderActivated();
+        //};
+        //ValueCallback<Throwable> errorCallback = (throwable) -> {
+        //    callback.onError(new PrerenderException("Prerender operation failed", throwable));
+        //};
+        //mImpl.prerenderUrl(
+        //        url,
+        //        cancellationSignal,
+        //        paramsBoundaryInterface,
+        //        activationCallback,
+        //        errorCallback);
     }
 }

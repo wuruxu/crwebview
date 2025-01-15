@@ -32,6 +32,7 @@ import org.chromium.support_lib_boundary.util.BoundaryInterfaceReflectionUtil;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
+import android.util.Log;
 import java.lang.reflect.InvocationHandler;
 import java.util.concurrent.Executor;
 
@@ -110,19 +111,7 @@ public class ProfileImpl implements Profile {
             @NonNull Executor callbackExecutor,
             @NonNull SpeculativeLoadingParameters params,
             @NonNull OutcomeReceiverCompat<Void, PrefetchException> callback) {
-        ApiFeature.NoFramework feature = WebViewFeatureInternal.PROFILE_URL_PREFETCH;
-        if (feature.isSupportedByWebView()) {
-            InvocationHandler paramsBoundaryInterface =
-                    BoundaryInterfaceReflectionUtil.createInvocationHandlerFor(
-                            new SpeculativeLoadingParametersAdapter(params));
-
-            mProfileImpl.prefetchUrl(url, cancellationSignal, callbackExecutor,
-                    paramsBoundaryInterface,
-                    PrefetchOperationCallbackAdapter.buildInvocationHandler(callback));
-
-        } else {
-            throw WebViewFeatureInternal.getUnsupportedOperationException();
-        }
+        Log.i("crWebView androidx", " prefetchUrlAsync1 url " + url);
     }
 
     @Override
@@ -130,26 +119,14 @@ public class ProfileImpl implements Profile {
             @Nullable CancellationSignal cancellationSignal,
             @NonNull Executor callbackExecutor,
             @NonNull OutcomeReceiverCompat<Void, PrefetchException> callback) {
-        ApiFeature.NoFramework feature = WebViewFeatureInternal.PROFILE_URL_PREFETCH;
-        if (feature.isSupportedByWebView()) {
-            mProfileImpl.prefetchUrl(url, cancellationSignal, callbackExecutor,
-                    PrefetchOperationCallbackAdapter.buildInvocationHandler(callback));
-        } else {
-            throw WebViewFeatureInternal.getUnsupportedOperationException();
-        }
+        Log.i("crWebView androidx", " prefetchUrlAsync2 url " + url);
     }
 
     @Override
     public void clearPrefetchAsync(@NonNull String url,
             @NonNull Executor callbackExecutor,
             @NonNull OutcomeReceiverCompat<Void, PrefetchException> callback) {
-        ApiFeature.NoFramework feature = WebViewFeatureInternal.PROFILE_URL_PREFETCH;
-        if (feature.isSupportedByWebView()) {
-            mProfileImpl.clearPrefetch(url, callbackExecutor,
-                    PrefetchOperationCallbackAdapter.buildInvocationHandler(callback));
-        } else {
-            throw WebViewFeatureInternal.getUnsupportedOperationException();
-        }
+        Log.i("crWebView androidx", " clearPrefetchAsync url " + url);
     }
 
 }
