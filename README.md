@@ -18,7 +18,7 @@ import org.chromium.android_crwebview.webkit.WebView
 
 
 
-NOTES:
+Important Note:
 add following 'androidResources' options in app/build.gradle
 ```
 android {
