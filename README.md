@@ -16,5 +16,17 @@ to
 import org.chromium.android_crwebview.webkit.WebView
 ```
 
+
+
+NOTES:
+add following 'androidResources' options in app/build.gradle
+```
+android {
+    ....
+    androidResources {
+        noCompress 'bin', 'pak'
+    }
+}
+```
 # Sponsors
 1. [AirConsole](https://www.airconsole.com/) 
